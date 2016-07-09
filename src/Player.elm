@@ -11,6 +11,7 @@ import Util
 import Vec exposing (Vec)
 import Friction
 import CollisionMap exposing (CollisionMap)
+import TileGrid exposing (TileGrid)
 
 
 type alias Model =
@@ -47,8 +48,8 @@ init pos =
 
 
 -- delta is seconds
-tick : Time -> KE.Model -> CollisionMap -> Model -> (Model, Maybe Vec)
-tick delta keys collisionMap model =
+tick : Time -> KE.Model -> TileGrid -> Model -> (Model, TileGrid.CollisionResult)
+tick delta keys tileGrid model =
   let
     nextSubangle =
       if KE.isPressed KE.ArrowLeft keys then
@@ -75,23 +76,33 @@ tick delta keys collisionMap model =
       |> Vec.add model.vel
       |> Friction.applyWithThreshold delta model.friction 0.10
       |> enforceMaxSpeed model.maxSpeed
-    (nextPos, nextVel', maybeTile) =
+    (nextPos, nextVel', result) =
       let
-        result =
-          CollisionMap.trace 30 model.pos nextVel collisionMap
-        (nextVelX, nextVelY) = nextVel
-        vx =
-          if result.collision.x then
-            -nextVelX * 0.9
+        -- Bounce off walls with 75% of velocity leftover
+        bounciness = 0.75
+        minBounceVel = 0.50
+        -- TODO: Apply friction again when ship hits a wall so that they
+        --       lose speed when sliding along a wall.
+        result = TileGrid.trace 30 model.pos nextVel tileGrid
+        (vx, vy) = nextVel
+        vx' =
+          if result.dirs.left || result.dirs.right then
+            if bounciness > 0 && abs vx > minBounceVel then
+              -vx * bounciness
+            else
+              0
           else
-            nextVelX
-        vy =
-          if result.collision.y then
-            -nextVelY * 0.9
+            vx
+        vy' =
+          if result.dirs.top || result.dirs.bottom then
+            if bounciness > 0 && abs vy > minBounceVel then
+              -vy * bounciness
+            else
+              0
           else
-            nextVelY
+            vy
       in
-        (result.pos, Vec.make vx vy, result.tile)
+        (result.pos, Vec.make vx' vy', result)
   in
     ( { model
           | angle = nextAngle
@@ -100,8 +111,9 @@ tick delta keys collisionMap model =
           , vel = nextVel'
           , pos = nextPos
       }
-    , maybeTile
+    , result
     )
+
 
 
 enforceMaxSpeed : Float -> Vec -> Vec

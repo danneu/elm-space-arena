@@ -1,6 +1,8 @@
 
 module Util exposing (..)
 
+-- Elm
+import Task
 -- 1st
 import Vec exposing (Vec)
 
@@ -44,4 +46,13 @@ unwrapMaybe maybe =
 -- and +y goes down.
 toCoord : { x : Int, y : Int } -> Vec -> (Float, Float)
 toCoord viewport (x, y) =
+  --(x - (toFloat viewport.x / 2), (toFloat viewport.y / 2) - y)
   (x - (toFloat viewport.x / 2), (toFloat viewport.y / 2) - y)
+
+
+-- Lifts a msg into a cmd that resolves that msg
+--
+-- Ex: (model, toCmd Refresh)
+toCmd : msg -> Cmd msg
+toCmd msg =
+  Task.perform identity identity (Task.succeed msg)

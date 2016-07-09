@@ -19,6 +19,7 @@ import Numeral
 import Vec exposing (Vec)
 import Player
 import CollisionMap exposing (CollisionMap)
+import TileGrid exposing (TileGrid)
 import Util
 import Starfield exposing (Starfield)
 import Ship
@@ -30,6 +31,7 @@ import Ship
 type alias Model =
   { player : Player.Model
   , collisionMap : CollisionMap
+  , tileGrid : TileGrid
   , keyboard : KE.Model
   , prevTick : Maybe Time
   , ticking : Bool
@@ -46,6 +48,7 @@ init {viewport} =
   in
     ( { player = Player.init (Vec.make 100 100)
       , collisionMap = CollisionMap.default
+      , tileGrid = Debug.log "TileGrid" TileGrid.default
       , keyboard = kbModel
       , prevTick = Nothing
       , ticking = True
@@ -65,7 +68,7 @@ type Msg
   | Keyboard KE.Msg
   | Tick Time
   | ViewportResized { x : Int, y : Int }
-  | StopTick
+  | ToggleTick
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -90,22 +93,29 @@ update msg model =
             -- Seconds since last tick
             delta : Time
             delta = Time.inSeconds (now - prev)
-            (player', maybeTile) = Player.tick delta model.keyboard model.collisionMap model.player
+            (player', result) =
+              Player.tick delta model.keyboard model.tileGrid model.player
           in
             ( { model
                   | player = player'
                   , prevTick = Just now
-                  , lastCollision =
-                      case maybeTile of
-                        Nothing -> model.lastCollision
-                        Just vector -> vector
+                  -- , ticking =
+                  --     if result.dirs.left || result.dirs.right
+                  --        || result.dirs.top || result.dirs.bottom then
+                  --       False
+                  --     else
+                  --       model.ticking
+                  -- , lastCollision =
+                  --     case maybeTile of
+                  --       Nothing -> model.lastCollision
+                  --       Just vector -> vector
               }
             , Cmd.none
             )
     ViewportResized viewport' ->
       ({ model | viewport = viewport'}, Cmd.none)
-    StopTick ->
-      ({ model | ticking = False }, Cmd.none)
+    ToggleTick ->
+      ({ model | ticking = not model.ticking }, Cmd.none)
 
 
 -- VIEW
@@ -119,9 +129,9 @@ view model =
     stage =
       Collage.collage model.viewport.x model.viewport.y
         [ Starfield.draw model.viewport model.player.pos model.starfield
-        , CollisionMap.draw model.lastCollision (Util.toCoord model.viewport) model.collisionMap
-          |> Collage.moveX -(fst shipCoord)
-          |> Collage.moveY -(snd shipCoord)
+        , TileGrid.draw (Util.toCoord model.viewport) model.tileGrid
+            |> Collage.moveX -(fst shipCoord)
+            |> Collage.moveY -(snd shipCoord)
         , Ship.draw model.player.angle
         ]
       |> Element.toHtml
@@ -133,9 +143,9 @@ view model =
       [ class "overlay" ]
       [ button
         [ class "btn btn-default"
-        , onClick StopTick
+        , onClick ToggleTick
         ]
-        [ text "Stop" ]
+        [ text <| if model.ticking then "Pause" else "Unpause" ]
       , ul
         []
         [ li [] [ text <| "pos: " ++ Vec.show 0 model.player.pos ]
@@ -154,6 +164,7 @@ view model =
 
 port resizes : ({ x : Int, y : Int } -> msg) -> Sub msg
 
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
   if model.ticking then
@@ -163,7 +174,10 @@ subscriptions model =
       , resizes ViewportResized
       ]
   else
-    Sub.none
+    Sub.batch
+      [ Sub.map Keyboard KE.subscriptions
+      , resizes ViewportResized
+      ]
 
 
 main : Program { viewport : { x : Int, y : Int } }
