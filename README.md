@@ -7,6 +7,15 @@ A sloppy 2D spaceship shooter built with Elm to explore game development.
 
 It's a work-in-progress with shameful code.
 
+## Clone
+
+    $ git clone https://github.com/danneu/elm-space-arena.git
+    $ cd elm-space-arena
+    $ npm install
+    $ elm make
+    $ npm start
+    Dev server running on <http://localhost:8080>
+
 ## Development
 
 Start the hot-reloading webpack dev server:

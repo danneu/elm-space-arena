@@ -46,6 +46,6 @@ draw tile =
     Empty ->
       Nothing
     Box ->
-      Element.image 16 16 "/img/wall.png"
+      Element.image 16 16 "./img/wall.png"
       |> Collage.toForm
       |> Just

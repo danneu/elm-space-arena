@@ -50,7 +50,7 @@ init {viewport} =
       , prevTick = Nothing
       , ticking = True
       , viewport = viewport
-      , starfield = Starfield.init 2 600 "/img/starfield.jpg"
+      , starfield = Starfield.init 2 600 "./img/starfield.jpg"
       , lastCollision = Vec.make 0 0
       }
     , Cmd.map Keyboard kbCmd

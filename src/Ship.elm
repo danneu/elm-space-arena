@@ -14,7 +14,7 @@ draw : Float -> Collage.Form
 draw angle =
   let
     shipForm =
-      Element.image 30 30 "/img/warbird.gif"
+      Element.image 30 30 "./img/warbird.gif"
       |> Collage.toForm
       |> Collage.rotate (degrees -angle)
   in
