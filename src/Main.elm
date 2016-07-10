@@ -162,16 +162,16 @@ view model =
         , TileGrid.transform model.viewport model.player.pos model.gfx.tileGrid
         , Ship.transform model.player.angle model.gfx.ship
           -- Show the tiles that will be checked for collision
-        , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
-          |> List.map
-              (\tile ->
-                  Collage.square 16
-                  |> Collage.outlined  (Collage.solid Color.yellow)
-                  |> Collage.move (Util.toCoord model.viewport tile.pos)
-              )
-          |> Collage.group
-          |> Collage.moveX -(fst shipCoord)
-          |> Collage.moveY -(snd shipCoord)
+        -- , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
+        --   |> List.map
+        --       (\tile ->
+        --           Collage.square 16
+        --           |> Collage.outlined  (Collage.solid Color.yellow)
+        --           |> Collage.move (Util.toCoord model.viewport tile.pos)
+        --       )
+        --   |> Collage.group
+        --   |> Collage.moveX -(fst shipCoord)
+        --   |> Collage.moveY -(snd shipCoord)
         ]
       |> Element.toHtml
   in
