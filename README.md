@@ -7,6 +7,12 @@ A sloppy 2D spaceship shooter built with Elm to explore game development.
 
 It's a work-in-progress with shameful code.
 
+## Technical
+
+- `(x, y)` starts at the top-left.
+  `x` increases going right, `y` increases going down.
+- `position` is always the center of an entity.
+
 ## Clone
 
     $ git clone https://github.com/danneu/elm-space-arena.git
@@ -15,29 +21,3 @@ It's a work-in-progress with shameful code.
     $ elm make
     $ npm start
     Dev server running on <http://localhost:8080>
-
-## Development
-
-Start the hot-reloading webpack dev server:
-
-    npm start
-
-Navigate to <http://localhost:8080>.
-
-Any changes you make to your files (.elm, .js, .css, etc.) will trigger
-a hot reload.
-
-## Production
-
-When you're ready to deploy:
-
-    npm run build
-
-This will create a `dist` folder:
-
-    .
-    ├── dist
-    │   ├── index.html 
-    │   ├── 5df766af1ced8ff1fe0a.css
-    │   └── 5df766af1ced8ff1fe0a.js
-

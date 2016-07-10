@@ -3,7 +3,6 @@ module Player exposing (..)
 
 
 -- Elm
-import Time exposing (Time)
 import Json.Encode as JE
 -- 3rd
 import Keyboard.Extra as KE
@@ -15,7 +14,8 @@ import TileGrid exposing (TileGrid)
 
 
 type alias Model =
-  { pos : Vec
+  { id : Int
+  , pos : Vec
   , vel : Vec
   , acc : Vec
     -- Subangle is a float 0-359 that is used to calculate angle
@@ -26,26 +26,28 @@ type alias Model =
     -- angles like 0deg, 90deg, 180deg, ... so they can for example shoot down
     -- a hallway or aim through a hole in the wall.
   , angle : Float
-  , thrust : Float
+  , thrust : Float -- aka force. i.e. acceleration = thrust / mass
   , mass : Float
-  , turnPerSecond : Float
+  , turnPerSecond : Float -- degrees
   , maxSpeed : Float
+    -- The % of velocity lost per second
   , friction : Float
   }
 
 
-init : Vec -> Model
-init pos =
-  { pos = pos
+init : Int -> Vec -> Model
+init id pos =
+  { id = id
+  , pos = pos
   , vel = Vec.make 0 0
   , acc = Vec.make 0 0
   , subangle = 0
   , angle = 0
-  , thrust = 1200 -- aka force
+  , thrust = 1200
   , mass = 5
-  , turnPerSecond = 250 -- Degrees the ship can turn per second
+  , turnPerSecond = 250
   , maxSpeed = 200
-  , friction = 0.25 -- The % of velocity lost per second
+  , friction = 0.25
   }
 
 

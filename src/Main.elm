@@ -30,13 +30,16 @@ import Bombs exposing (Bomb)
 
 
 type alias Model =
-  { nextId : Int
+  { -- To generate unique ids, we just increment this number
+    nextId : Int
   , player : Player.Model
   , tileGrid : TileGrid
+    -- Keeps track of which keys are currently pressed
   , keyboard : KE.Model
   , prevTick : Maybe Time
+    -- Whether or not the simulation is unpaused
   , ticking : Bool
-  , lastCollision : Vec
+    -- Stores the current player collision for debugging
   , collision : Maybe TileGrid.CollisionResult
   , bombs : List Bomb
   , bombTime : Float
@@ -49,19 +52,20 @@ init _ =
     (kbModel, kbCmd) = KE.init
     tileGrid = TileGrid.default
   in
-    ( { nextId = 1
-      , player = Player.init (Vec.make 100 100)
+    ( { nextId = 2
+      , player = Player.init 1 (Vec.make 100 100)
       , tileGrid = tileGrid
       , keyboard = kbModel
       , prevTick = Nothing
       , ticking = True
-      , lastCollision = Vec.make 0 0
       , collision = Nothing
       , bombs = []
       , bombTime = 0
       }
     , Cmd.batch
         [ Cmd.map Keyboard kbCmd
+          -- Send the tilegrid through the port to the JS side of our app
+          -- so that it can initialize
         , grid (JE.encode 0 (TileGrid.encode tileGrid))
         ]
     )
@@ -86,6 +90,7 @@ update msg model =
     Keyboard kbMsg ->
       let
         (kbModel, kbCmd) = KE.update kbMsg model.keyboard
+        -- On Spacebar, pause/unpause the game
         (model', cmd) =
           if KE.isPressed KE.Space kbModel then
             update ToggleTick model
@@ -126,6 +131,7 @@ update msg model =
                   , nextId = id'
                   , bombTime = bombTime
               }
+              -- Send every tick result to the JS side of our app
             , broadcast (encodeBroadcast model)
             )
     ResetPrevTick now ->

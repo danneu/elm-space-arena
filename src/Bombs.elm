@@ -2,18 +2,19 @@
 module Bombs exposing (..)
 
 -- Elm
-import Time exposing (Time)
 import Json.Encode as JE
 -- 1st
 import Vec exposing (Vec)
 import Player
+import TileGrid exposing (TileGrid)
 
 
 type alias Bomb =
   { id : Int
   , pos : Vec
   , vel : Vec
-  , ttl : Float -- seconds that bomb stays in flight
+  , ttl : Float -- bomb stays in flight for ttl seconds
+  , ownerId : Int -- id for the entity that shot it, e.g. player id
   }
 
 
@@ -53,8 +54,8 @@ fire id player bombs =
       , pos = Player.nose player
       , vel = player.vel
               |> Vec.add (Vec.rotate player.angle (0, 200))
-
       , ttl = 5
+      , ownerId = player.id
       }
   in
     bomb :: bombs
