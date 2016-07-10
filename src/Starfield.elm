@@ -1,5 +1,5 @@
 
-module Starfield exposing (Starfield, draw, init)
+module Starfield exposing (Starfield, init, toForm, transform)
 
 
 -- 3rd
@@ -25,14 +25,35 @@ init distance tileSize url =
   StarfieldRecord distance tileSize url
 
 
-draw : { x : Int, y : Int} -> Vec -> Starfield -> Collage.Form
-draw viewport ((x, y) as shipPos) {distance, tileSize, url} =
+-- RENDER
+
+
+toForm : { x : Int, y : Int } -> Starfield -> Collage.Form
+toForm viewport {tileSize, url} =
+  Element.tiledImage (viewport.x + tileSize * 2) (viewport.y + tileSize * 2) url
+  |> Collage.toForm
+
+
+transform : Vec -> Collage.Form -> Starfield -> Collage.Form
+transform ((x, y) as shipPos) form {distance, tileSize} =
   let
     coord =
       ( toFloat ((round (-x / distance)) % tileSize)
       , toFloat ((round (y / distance)) % tileSize)
       )
   in
-    Element.tiledImage (viewport.x + tileSize * 2) (viewport.y + tileSize * 2) url
-    |> Collage.toForm
-    |> Collage.move coord
+    Collage.move coord form
+
+
+-- OLD
+-- draw : { x : Int, y : Int} -> Vec -> Starfield -> Collage.Form
+-- draw viewport ((x, y) as shipPos) {distance, tileSize, url} =
+--   let
+--     coord =
+--       ( toFloat ((round (-x / distance)) % tileSize)
+--       , toFloat ((round (y / distance)) % tileSize)
+--       )
+--   in
+--     Element.tiledImage (viewport.x + tileSize * 2) (viewport.y + tileSize * 2) url
+--     |> Collage.toForm
+--     |> Collage.move coord

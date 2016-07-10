@@ -138,6 +138,18 @@ type alias CollisionResult =
   }
 
 
+-- Debug
+showCollisionResult : CollisionResult -> String
+showCollisionResult result =
+  "[ "
+  ++ (if result.dirs.left then "Left " else "")
+  ++ (if result.dirs.right then "Right " else "")
+  ++ (if result.dirs.top then "Top " else "")
+  ++ (if result.dirs.bottom then "Bottom " else "")
+  ++ "]"
+
+
+
 collides : Int -> Vec -> Int -> Vec -> Bool
 collides size1 ((x1, y1) as pos1) size2 ((x2, y2) as pos2) =
   let
@@ -241,6 +253,7 @@ trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
       Debug.crash "Huh? Ship wasn't inside a tile?"
     Just centerTile ->
       let
+        -- Only need to collision-check nearby tiles
         neighbors =
           tilesWithinPosRadius
             (toFloat size / 2 + toFloat grid.tileSize / 2)
@@ -257,8 +270,8 @@ trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
 -- RENDER
 
 
-draw : (Vec -> (Float, Float)) -> TileGrid -> Collage.Form
-draw toCoord ({dict} as grid) =
+toForm : (Vec -> (Float, Float)) -> TileGrid -> Collage.Form
+toForm toCoord ({dict} as grid) =
   Dict.values dict
   |> List.map (\tile ->
        case Tile.draw tile of
@@ -272,3 +285,31 @@ draw toCoord ({dict} as grid) =
   |> List.filter Util.isJust
   |> List.map Util.unwrapMaybe
   |> Collage.group
+
+
+transform : { x : Int, y : Int } -> Vec -> Collage.Form -> Collage.Form
+transform viewport shipPos form =
+  let
+    shipCoord = Util.toCoord viewport shipPos
+  in
+    form
+    |> Collage.moveX -(fst shipCoord)
+    |> Collage.moveY -(snd shipCoord)
+
+
+-- OLD
+-- draw : (Vec -> (Float, Float)) -> TileGrid -> Collage.Form
+-- draw toCoord ({dict} as grid) =
+--   Dict.values dict
+--   |> List.map (\tile ->
+--        case Tile.draw tile of
+--          Nothing ->
+--            Nothing
+--          Just form ->
+--            form
+--            |> Collage.move (toCoord tile.pos)
+--            |> Just
+--      )
+--   |> List.filter Util.isJust
+--   |> List.map Util.unwrapMaybe
+--   |> Collage.group

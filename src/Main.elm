@@ -18,7 +18,6 @@ import Numeral
 -- 1st
 import Vec exposing (Vec)
 import Player
-import CollisionMap exposing (CollisionMap)
 import TileGrid exposing (TileGrid)
 import Util
 import Starfield exposing (Starfield)
@@ -28,16 +27,26 @@ import Ship
 -- MODEL
 
 
+-- A cache of our Collage.Forms so all we need to do is transform
+-- them instead of rebuilding them every update.
+type alias Gfx =
+  { starfield : Collage.Form
+  , tileGrid : Collage.Form
+  , ship : Collage.Form
+  }
+
+
 type alias Model =
   { player : Player.Model
-  , collisionMap : CollisionMap
   , tileGrid : TileGrid
   , keyboard : KE.Model
   , prevTick : Maybe Time
   , ticking : Bool
   , viewport : { x : Int, y : Int }
-  , starfield : Starfield
   , lastCollision : Vec
+  , starfield : Starfield
+  , gfx : Gfx
+  , collision : Maybe TileGrid.CollisionResult
   }
 
 
@@ -45,16 +54,23 @@ init : { viewport : { x : Int, y: Int } } -> (Model, Cmd Msg)
 init {viewport} =
   let
     (kbModel, kbCmd) = KE.init
+    starfield = Starfield.init 2 600 "./img/starfield.jpg"
+    tileGrid = TileGrid.default
   in
     ( { player = Player.init (Vec.make 100 100)
-      , collisionMap = CollisionMap.default
-      , tileGrid = Debug.log "TileGrid" TileGrid.default
+      , tileGrid = tileGrid
       , keyboard = kbModel
       , prevTick = Nothing
       , ticking = True
       , viewport = viewport
-      , starfield = Starfield.init 2 600 "./img/starfield.jpg"
       , lastCollision = Vec.make 0 0
+      , starfield = starfield
+      , gfx =
+          { starfield = Starfield.toForm viewport starfield
+          , tileGrid = TileGrid.toForm (Util.toCoord viewport) tileGrid
+          , ship = Ship.toForm
+          }
+      , collision = Nothing
       }
     , Cmd.map Keyboard kbCmd
     )
@@ -99,6 +115,7 @@ update msg model =
             ( { model
                   | player = player'
                   , prevTick = Just now
+                  , collision = Just result
                   -- , ticking =
                   --     if result.dirs.left || result.dirs.right
                   --        || result.dirs.top || result.dirs.bottom then
@@ -113,7 +130,20 @@ update msg model =
             , Cmd.none
             )
     ViewportResized viewport' ->
-      ({ model | viewport = viewport'}, Cmd.none)
+      let
+        gfx = model.gfx
+        gfx' =
+          { gfx
+              | starfield = Starfield.toForm viewport' model.starfield
+              , tileGrid = TileGrid.toForm (Util.toCoord viewport') model.tileGrid
+          }
+      in
+        ( { model
+              | viewport = viewport'
+              , gfx = gfx'
+          }
+        , Cmd.none
+        )
     ToggleTick ->
       ({ model | ticking = not model.ticking }, Cmd.none)
 
@@ -128,22 +158,20 @@ view model =
       Util.toCoord model.viewport model.player.pos
     stage =
       Collage.collage model.viewport.x model.viewport.y
-        [ Starfield.draw model.viewport model.player.pos model.starfield
-        , TileGrid.draw (Util.toCoord model.viewport) model.tileGrid
-            |> Collage.moveX -(fst shipCoord)
-            |> Collage.moveY -(snd shipCoord)
-        , Ship.draw model.player.angle
+        [ Starfield.transform model.player.pos model.gfx.starfield model.starfield
+        , TileGrid.transform model.viewport model.player.pos model.gfx.tileGrid
+        , Ship.transform model.player.angle model.gfx.ship
           -- Show the tiles that will be checked for collision
-        -- , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
-        --   |> List.map
-        --       (\tile ->
-        --           Collage.square 16
-        --           |> Collage.outlined  (Collage.solid Color.yellow)
-        --           |> Collage.move (Util.toCoord model.viewport tile.pos)
-        --       )
-        --   |> Collage.group
-        --   |> Collage.moveX -(fst shipCoord)
-        --   |> Collage.moveY -(snd shipCoord)
+        , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
+          |> List.map
+              (\tile ->
+                  Collage.square 16
+                  |> Collage.outlined  (Collage.solid Color.yellow)
+                  |> Collage.move (Util.toCoord model.viewport tile.pos)
+              )
+          |> Collage.group
+          |> Collage.moveX -(fst shipCoord)
+          |> Collage.moveY -(snd shipCoord)
         ]
       |> Element.toHtml
   in
@@ -164,8 +192,18 @@ view model =
         , li [] [ text <| "acc: " ++ Vec.show 2 model.player.acc ]
         , li
           []
-          [ text <| "spd: " ++ (Numeral.format "0.00" (Vec.length model.player.vel)) ]
+          [ text <|
+              "spd: " ++ (Numeral.format "0.00" (Vec.length model.player.vel))
+          ]
         , li [] [ text <| "angle: " ++ (Numeral.format "0.00" model.player.angle) ]
+        , li
+          []
+          [ text
+              <| "collisions: " ++
+                 case model.collision of
+                   Nothing -> "--"
+                   Just result -> TileGrid.showCollisionResult result
+          ]
         ]
       ]
     ]
