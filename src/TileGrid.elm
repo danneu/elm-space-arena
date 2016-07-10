@@ -60,7 +60,7 @@ default =
           , rowCount = 20
           , colCount = 64
           , greenCount = 0
-          , maxGreens = 50
+          , maxGreens = 30
           }
       )
 
