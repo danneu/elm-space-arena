@@ -78,6 +78,13 @@ player.position.set(viewport.x / 2, viewport.y / 2);
 stage.addChild(player);
 player.anchor.set(0.5);
 
+// Grid
+// Gets loaded with tiles in the `grid` subscription once app sends us the tilegrid
+// Though needs to be mounted to the stage early so that it isn't drawn
+// on top of anything.
+var grid = new PIXI.Container();
+stage.addChild(grid);
+
 // Bombs
 var bombs = new PIXI.Container();
 stage.addChild(bombs);
@@ -95,9 +102,6 @@ stage.addChild(exhaustLayer);
 var empburstLayer = new PIXI.Container();
 stage.addChild(empburstLayer);
 
-// Grid
-// Gets assigned in the `grid` subscription once app sends us the tilegrid
-var grid;
 
 
 // RENDER
@@ -221,8 +225,7 @@ app.ports.broadcast.subscribe(function (newState) {
 
 app.ports.grid.subscribe(function (blocks) {
   // short-circuit on hot-reload
-  if (grid) return;
-  grid = new PIXI.Container();
+  if (grid.children.length > 0) return;
   blocks.forEach(function (block) {
     var sprite = new PIXI.Sprite.fromImage('./img/wall.png');
     sprite.anchor.set(0.5);
@@ -231,7 +234,6 @@ app.ports.grid.subscribe(function (blocks) {
     sprite.position.set(block.pos.x, block.pos.y);
     grid.addChild(sprite);
   });
-  stage.addChild(grid);
 });
 
 app.ports.bombHitWall.subscribe(function (bomb) {
