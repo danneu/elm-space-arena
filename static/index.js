@@ -113,7 +113,8 @@ function animate () {
   bombs.position.set(offsetX, offsetY);
   // Move and decay trails
   trails.position.set(offsetX, offsetY);
-  for (var trail of trails.children) {
+  for (var i = 0; i < trails.children.length; i++) {
+    var trail = trails.children[i];
     if (trail.alpha < 0.1) {
       trails.removeChild(trail);
       trail.destroy();
