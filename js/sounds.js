@@ -35,10 +35,10 @@ module.exports = {
   }),
   bomb: (function () {
     var _sounds = [
-      new Howl({urls: ['./sounds/bomb1.mp3'], volume: 0.1}),
-      new Howl({urls: ['./sounds/bomb2.mp3'], volume: 0.1}),
+      //new Howl({urls: ['./sounds/bomb1.mp3'], volume: 0.1}),
+      //new Howl({urls: ['./sounds/bomb2.mp3'], volume: 0.1}),
       new Howl({urls: ['./sounds/bomb3.mp3'], volume: 0.1}),
-      new Howl({urls: ['./sounds/bomb2.mp3'], volume: 0.1})
+      //new Howl({urls: ['./sounds/bomb4.mp3'], volume: 0.1})
     ];
     return {
       play: function () {
