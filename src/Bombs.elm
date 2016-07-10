@@ -18,19 +18,37 @@ type alias Bomb =
   }
 
 
-tick : Float -> List Bomb -> List Bomb
-tick delta =
-  List.filterMap (killBomb delta << moveBomb delta)
+tick : Float -> TileGrid -> List Bomb -> List Bomb
+tick delta grid =
+  List.filterMap
+    ( moveBomb delta
+      >> checkWall delta grid
+      >> (flip Maybe.andThen) (expireBomb delta)
+    )
 
 
-killBomb : Float -> Bomb -> Maybe Bomb
-killBomb delta bomb =
+-- Check if bomb has run out of ttl
+expireBomb : Float -> Bomb -> Maybe Bomb
+expireBomb delta bomb =
   if bomb.ttl <= 0 then
     Nothing
   else
     Just bomb
 
 
+-- If bomb hits a wall, it dies
+checkWall : Float -> TileGrid -> Bomb -> Maybe Bomb
+checkWall deltaTime grid bomb =
+  let
+    {dirs} = TileGrid.trace deltaTime 0 bomb.pos bomb.vel grid
+  in
+    if dirs.left || dirs.right || dirs.top || dirs.bottom then
+      Nothing
+    else
+      Just bomb
+
+
+-- Move and age the bomb
 moveBomb : Float -> Bomb -> Bomb
 moveBomb delta bomb =
   let
@@ -54,7 +72,7 @@ fire id player bombs =
       , pos = Player.nose player
       , vel = player.vel
               |> Vec.add (Vec.rotate player.angle (0, 200))
-      , ttl = 5
+      , ttl = 4
       , ownerId = player.id
       }
   in

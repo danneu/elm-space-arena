@@ -111,9 +111,12 @@ update msg model =
           let
             -- Seconds since last tick
             delta = Time.inSeconds (now - prev)
+            -- Update player position
             (player', result) =
               Player.tick delta model.keyboard model.tileGrid model.player
-            bombs = Bombs.tick delta model.bombs
+            -- Update bombs
+            bombs = Bombs.tick delta model.tileGrid model.bombs
+            -- Shoot bomb
             (bombs', bombTime, id') =
               if KE.isPressed KE.CharF model.keyboard && model.bombTime >= 0 then
                 ( Bombs.fire model.nextId model.player bombs,
