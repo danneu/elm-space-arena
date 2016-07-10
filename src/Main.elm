@@ -24,7 +24,7 @@ import TileGrid exposing (TileGrid)
 import Util exposing ((=>))
 import Ship
 import Bombs exposing (Bomb)
-
+import Tile
 
 -- MODEL
 
@@ -117,26 +117,50 @@ update msg model =
             -- Update bombs
             bombs = Bombs.tick delta model.tileGrid model.bombs
             -- Shoot bomb
-            (bombs', bombTime, id') =
+            (bombs', bombTime, id', didShootBomb) =
               if KE.isPressed KE.CharF model.keyboard && model.bombTime >= 0 then
-                ( Bombs.fire model.nextId model.player bombs,
-                  -1.0,
-                  model.nextId + 1
+                ( Bombs.fire model.nextId model.player bombs
+                , -1.0
+                , model.nextId + 1
+                , True
                 )
               else
-                (bombs, model.bombTime + delta, model.nextId)
+                (bombs, model.bombTime + delta, model.nextId, False)
           in
-            ( { model
-                  | player = player'
-                  , prevTick = Just now
-                  , collision = Just result
-                  , bombs = bombs'
-                  , nextId = id'
-                  , bombTime = bombTime
-              }
-              -- Send every tick result to the JS side of our app
-            , broadcast (encodeBroadcast model)
-            )
+            { model
+                | player = player'
+                , prevTick = Just now
+                , collision = Just result
+                , bombs = bombs'
+                , nextId = id'
+                , bombTime = bombTime
+            }
+            ! [ -- Send every tick result to the JS side of our app
+                broadcast (encodeBroadcast model)
+                -- Play bounce sound if hit wall hard enough
+                -- FIXME: sloppy as hell. also fix the dirs spam finally.
+              , let
+                  {dirs} = result
+                  (vx, vy) = model.player.vel
+                  threshold = 10
+                  didCollide =
+                    dirs.top || dirs.bottom || dirs.left || dirs.right
+                  hitYHard =
+                    (dirs.top || dirs.bottom) && abs vy > threshold
+                  hitXHard =
+                    (dirs.left || dirs.right) && abs vx > threshold
+                in
+                  if didCollide && (hitXHard || hitYHard)  then
+                    playerHitWall ()
+                  else
+                    Cmd.none
+                -- Play bomb sound
+              , if didShootBomb then
+                  playerBomb ()
+                else
+                  Cmd.none
+              ]
+
     ResetPrevTick now ->
       ({ model | prevTick = Just now }, Cmd.none)
     ToggleTick ->
@@ -179,26 +203,18 @@ view model =
       [ text "Arrows to move, F to bomb, Spacebar to pause" ]
     , ul
       []
-      [ li [] [ text <| "pos: " ++ Vec.show 0 model.player.pos ]
-      , li [] [ text <| "vel: " ++ Vec.show 2 model.player.vel ]
-      , li [] [ text <| "acc: " ++ Vec.show 2 model.player.acc ]
-      , li
-        []
-        [ text <|
-            "spd: " ++ (Numeral.format "0.00" (Vec.length model.player.vel))
-        ]
-      , li [] [ text <| "angle: " ++ (Numeral.format "0.00" model.player.angle) ]
-      , li
-        []
-        [ text
-            <| "collisions: " ++
-                case model.collision of
-                  Nothing -> "--"
-                  Just result -> TileGrid.showCollisionResult result
-        ]
-      , li
-        []
-        [ text <| "bombs: " ++ toString (List.length model.bombs) ]
+      [ li [] [ text <| "pos: " ++ Vec.show 1 model.player.pos ]
+      , li [] [ text <| "vel: " ++ Vec.show 1 model.player.vel ]
+      , li [] [ text <| "acc: " ++ Vec.show 1 model.player.acc ]
+      , let speed = (Numeral.format "0.0" (Vec.length model.player.vel))
+        in li [] [ text <| "speed: " ++ speed ]
+      , li [] [ text <| "angle: " ++ (toString (floor model.player.angle)) ]
+      , let
+          str =
+            case model.collision of
+              Nothing -> "--"
+              Just result -> TileGrid.showCollisionResult result
+        in li [] [ text <| "collisions: " ++ str ]
       ]
     ]
   ]
@@ -233,6 +249,9 @@ encodeBroadcast model =
 
 port broadcast : String -> Cmd msg
 port grid : String -> Cmd msg
+-- Sounds
+port playerHitWall : () -> Cmd msg
+port playerBomb : () -> Cmd msg
 
 
 -- MAIN

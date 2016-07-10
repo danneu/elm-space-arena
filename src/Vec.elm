@@ -82,6 +82,9 @@ reverse vector =
   multiply -1 vector
 
 
+-- DEBUG
+
+
 show : Int -> Vec -> String
 show decimalPad (x, y) =
   let

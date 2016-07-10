@@ -5,10 +5,14 @@ require('./css/main.scss');
 
 // JS
 
+// 3rd party
 // TODO: Even without `var PIXI = ...`, PIXI is available just by
 //       writing `require('pixi.js')`. Is there a way to change this behavior
 //       so that I must assign the return value to use PIXI?
 var PIXI = require('pixi.js');
+// 1st party
+var sounds = require('./js/sounds');
+var belt = require('./js/belt');
 
 
 // UTIL
@@ -22,11 +26,6 @@ function getViewport () {
   };
 }
 
-// Get random item in an array
-function randomNth (items) {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
 
 // STORES
 
@@ -38,6 +37,7 @@ var viewport = getViewport();
 var state = {
   player: {
     pos: { x: 0, y: 0 },
+    acc: { x: 0, y: 0 }, // so we know when to play the engine sound
     angle: 0
   },
   bombs: {}
@@ -63,6 +63,7 @@ document.body.appendChild(renderer.view);
 
 // Starfield
 var starfield = PIXI.extras.TilingSprite.fromImage('./img/starfield.jpg', viewport.x, viewport.y);
+starfield.alpha = 0.5;
 stage.addChild(starfield);
 
 // Player
@@ -109,6 +110,12 @@ function animate () {
 
 app.ports.broadcast.subscribe(function (json) {
   var newState = JSON.parse(json);
+  // Play engine sound if user is accelerating
+  if (newState.player.acc.x === 0 && newState.player.acc.y === 0) {
+    sounds.engine.pause();
+  } else {
+    sounds.engine.play();
+  }
   // If any oldState bombs aren't in the newState, then remove them
   for (var id in state.bombs) {
     if (!newState.bombs[id]) {
@@ -152,6 +159,14 @@ app.ports.grid.subscribe(function (json) {
   stage.addChild(grid);
 });
 
+app.ports.playerHitWall.subscribe(function () {
+  sounds.bounce.play();
+});
+
+app.ports.playerBomb.subscribe(function () {
+  sounds.bomb.play();
+});
+
 
 // DOM EVENTS
 
@@ -172,7 +187,7 @@ window.onresize = function () {
 // level is 1 | 2 | 3 | 4
 function bombSprite (kind, level) {
   // Randomize if kind/level aren't set
-  kind = kind || randomNth(['A', 'B', 'C']);
+  kind = kind || belt.randNth(['A', 'B', 'C']);
   level = level || Math.floor(Math.random() * 4 + 1);
   var base = new PIXI.Texture.fromImage('./img/bombs.gif');
   var textures = [];

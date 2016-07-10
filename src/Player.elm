@@ -11,6 +11,7 @@ import Util
 import Vec exposing (Vec)
 import Friction
 import TileGrid exposing (TileGrid)
+import Util exposing ((=>))
 
 
 type alias Model =
@@ -142,8 +143,9 @@ nose {pos, angle} =
 
 
 encode : Model -> JE.Value
-encode {pos, angle} =
+encode {pos, acc, angle} =
   JE.object
-    [ ("pos", Vec.encode pos)
-    , ("angle", JE.float (degrees angle))
+    [ "pos" => Vec.encode pos
+    , "acc" => Vec.encode acc
+    , "angle" => JE.float (degrees angle)
     ]
