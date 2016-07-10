@@ -57,7 +57,7 @@ var app = Elm.Main.embed(document.getElementById('main'), null);
 // PIXI
 
 
-var stage = new PIXI.Stage(0x000000);
+var stage = new PIXI.Container();
 var renderer = PIXI.autoDetectRenderer(viewport.x, viewport.y);
 document.body.appendChild(renderer.view);
 
@@ -69,8 +69,8 @@ stage.addChild(starfield);
 // Player
 var player = new PIXI.Sprite.fromImage('./img/warbird.gif');
 player.position.set(viewport.x / 2, viewport.y / 2);
-player.anchor.set(0.5);
 stage.addChild(player);
+player.anchor.set(0.5);
 
 // Bombs
 var bombs = new PIXI.Container();
@@ -108,8 +108,7 @@ function animate () {
 // PORT EVENTS
 
 
-app.ports.broadcast.subscribe(function (json) {
-  var newState = JSON.parse(json);
+app.ports.broadcast.subscribe(function (newState) {
   // Play engine sound if user is accelerating
   if (newState.player.acc.x === 0 && newState.player.acc.y === 0) {
     sounds.engine.pause();
@@ -143,10 +142,9 @@ app.ports.broadcast.subscribe(function (json) {
   state = newState;
 });
 
-app.ports.grid.subscribe(function (json) {
+app.ports.grid.subscribe(function (blocks) {
   // short-circuit on hot-reload
   if (grid) return;
-  var blocks = JSON.parse(json);
   grid = new PIXI.Container();
   blocks.forEach(function (block) {
     var sprite = new PIXI.Sprite.fromImage('./img/wall.png');

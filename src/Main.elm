@@ -1,5 +1,5 @@
 
-port module Main exposing (..)
+module Main exposing (..)
 
 -- https://github.com/yupferris/elmsteroids/blob/master/src/Main.elm
 
@@ -25,6 +25,7 @@ import Util exposing ((=>))
 import Ship
 import Bombs exposing (Bomb)
 import Tile
+import Ports
 
 -- MODEL
 
@@ -66,7 +67,7 @@ init _ =
         [ Cmd.map Keyboard kbCmd
           -- Send the tilegrid through the port to the JS side of our app
           -- so that it can initialize
-        , grid (JE.encode 0 (TileGrid.encode tileGrid))
+        , Ports.grid (TileGrid.encode tileGrid)
         ]
     )
 
@@ -136,7 +137,7 @@ update msg model =
                 , bombTime = bombTime
             }
             ! [ -- Send every tick result to the JS side of our app
-                broadcast (encodeBroadcast model)
+                Ports.broadcast (encodeBroadcast model)
                 -- Play bounce sound if hit wall hard enough
                 -- FIXME: sloppy as hell. also fix the dirs spam finally.
               , let
@@ -151,12 +152,12 @@ update msg model =
                     (dirs.left || dirs.right) && abs vx > threshold
                 in
                   if didCollide && (hitXHard || hitYHard)  then
-                    playerHitWall ()
+                    Ports.playerHitWall ()
                   else
                     Cmd.none
                 -- Play bomb sound
               , if didShootBomb then
-                  playerBomb ()
+                  Ports.playerBomb ()
                 else
                   Cmd.none
               ]
@@ -238,20 +239,12 @@ subscriptions model =
 -- PORTS
 
 
-encodeBroadcast : Model -> String
+encodeBroadcast : Model -> JE.Value
 encodeBroadcast model =
   JE.object
-    [ ("player", Player.encode model.player)
-    , ("bombs", (Bombs.encodeN model.bombs))
+    [ "player" => Player.encode model.player
+    , "bombs" => Bombs.encodeN model.bombs
     ]
-  |> JE.encode 0
-
-
-port broadcast : String -> Cmd msg
-port grid : String -> Cmd msg
--- Sounds
-port playerHitWall : () -> Cmd msg
-port playerBomb : () -> Cmd msg
 
 
 -- MAIN
