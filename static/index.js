@@ -75,6 +75,10 @@ var starfield = PIXI.extras.TilingSprite.fromImage('./img/starfield.jpg', viewpo
 starfield.alpha = 0.5;
 stage.addChild(starfield);
 
+// Greens
+var greenLayer = new PIXI.Container();
+stage.addChild(greenLayer);
+
 // Player
 var player = new PIXI.Sprite.fromImage('./img/warbird.gif');
 player.position.set(viewport.x / 2, viewport.y / 2);
@@ -104,10 +108,6 @@ stage.addChild(exhaustLayer);
 // EMP Bursts
 var empburstLayer = new PIXI.Container();
 stage.addChild(empburstLayer);
-
-// Greens
-var greenLayer = new PIXI.Container();
-stage.addChild(greenLayer);
 
 
 // RENDER
