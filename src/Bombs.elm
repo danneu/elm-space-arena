@@ -71,7 +71,7 @@ fire id player bombs =
       { id = id
       , pos = Player.nose player
       , vel = player.vel
-              |> Vec.add (Vec.rotate player.angle (0, 200))
+              |> Vec.add (Vec.rotate player.angle (0, 450))
       , ttl = 4
       , ownerId = player.id
       }

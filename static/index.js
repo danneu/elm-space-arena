@@ -76,6 +76,20 @@ player.anchor.set(0.5);
 var bombs = new PIXI.Container();
 stage.addChild(bombs);
 
+// Trails
+// TODO: Recycle/pool
+var trails = new PIXI.Container();
+stage.addChild(trails);
+
+function makeTrail (x, y, radius) {
+  var g = new PIXI.Graphics();
+  g.beginFill(0x2330A0);
+  g.drawCircle(x, y, radius);
+  g.endFill();
+  g.alpha = 0.50;
+  return g;
+}
+
 // Grid
 var grid;
 
@@ -97,6 +111,16 @@ function animate () {
   player.rotation = state.player.angle;
   // Move bombs
   bombs.position.set(offsetX, offsetY);
+  // Move and decay trails
+  trails.position.set(offsetX, offsetY);
+  for (var trail of trails.children) {
+    if (trail.alpha < 0.1) {
+      trails.removeChild(trail);
+      trail.destroy();
+    } else {
+      trail.alpha *= 0.90
+    }
+  }
   // Move grid
   if (grid) {
     grid.position.set(offsetX, offsetY);
@@ -131,10 +155,12 @@ app.ports.broadcast.subscribe(function (newState) {
     var sprite = sprites[id];
     if (sprite) {
       // If there is a sprite, update it
+      var trail = makeTrail(sprite.position.x, sprite.position.y, sprite.width / 3);
+      trails.addChild(trail);
       sprite.position.set(data.pos.x, data.pos.y);
     } else {
       // Else create it
-      sprite = bombSprite();
+      sprite = bombSprite('B', 3);
       sprites[data.id] = sprite;
       bombs.addChild(sprite);
     }
@@ -199,7 +225,7 @@ function bombSprite (kind, level) {
   var clip = new PIXI.extras.MovieClip(textures);
   clip.animationSpeed = 0.10;
   clip.anchor.set(0.5);
-  clip.scale.set(1.5);
+  clip.scale.set(1.30);
   clip.play();
   return clip;
 }

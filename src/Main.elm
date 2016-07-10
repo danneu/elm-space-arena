@@ -121,7 +121,7 @@ update msg model =
             (bombs', bombTime, id', didShootBomb) =
               if KE.isPressed KE.CharF model.keyboard && model.bombTime >= 0 then
                 ( Bombs.fire model.nextId model.player bombs
-                , -1.0
+                , -1.3
                 , model.nextId + 1
                 , True
                 )
