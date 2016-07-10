@@ -143,9 +143,10 @@ nose {pos, angle} =
 
 
 encode : Model -> JE.Value
-encode {pos, acc, angle} =
+encode {pos, vel, acc, angle} =
   JE.object
     [ "pos" => Vec.encode pos
     , "acc" => Vec.encode acc
+    , "vel" => Vec.encode vel
     , "angle" => JE.float (degrees angle)
     ]

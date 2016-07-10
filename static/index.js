@@ -13,6 +13,7 @@ var PIXI = require('pixi.js');
 // 1st party
 var sounds = require('./js/sounds');
 var belt = require('./js/belt');
+var sprites = require('./js/sprites');
 
 
 // UTIL
@@ -37,6 +38,7 @@ var viewport = getViewport();
 var state = {
   player: {
     pos: { x: 0, y: 0 },
+    vel: { x: 0, y: 0 },
     acc: { x: 0, y: 0 }, // so we know when to play the engine sound
     angle: 0
   },
@@ -44,7 +46,7 @@ var state = {
 };
 
 // Sprite store
-var sprites = {};
+var spriteStore = {};
 
 
 // ELM
@@ -60,6 +62,10 @@ var app = Elm.Main.embed(document.getElementById('main'), null);
 var stage = new PIXI.Container();
 var renderer = PIXI.autoDetectRenderer(viewport.x, viewport.y);
 document.body.appendChild(renderer.view);
+
+// Sprite factories
+
+const makeTrail = sprites.makeTrailMaker(renderer, 16);
 
 // Starfield
 var starfield = PIXI.extras.TilingSprite.fromImage('./img/starfield.jpg', viewport.x, viewport.y);
@@ -81,14 +87,9 @@ stage.addChild(bombs);
 var trails = new PIXI.Container();
 stage.addChild(trails);
 
-function makeTrail (x, y, radius) {
-  var g = new PIXI.Graphics();
-  g.beginFill(0x2330A0);
-  g.drawCircle(x, y, radius);
-  g.endFill();
-  g.alpha = 0.50;
-  return g;
-}
+// Exhaust
+var exhaustLayer = new PIXI.Container();
+stage.addChild(exhaustLayer);
 
 // Grid
 var grid;
@@ -96,11 +97,14 @@ var grid;
 
 // RENDER
 
+var elapsed = Date.now();
 
-requestAnimationFrame(animate);
+requestAnimationFrame(update);
 
-function animate () {
-  requestAnimationFrame(animate);
+function update () {
+  requestAnimationFrame(update);
+  var now = Date.now();
+  var deltaTime = (now - elapsed) * 0.001;
   // Camera offset, since we keep our player ship in the center
   var offsetX = viewport.x / 2 - state.player.pos.x;
   var offsetY = viewport.y / 2 - state.player.pos.y;
@@ -111,6 +115,20 @@ function animate () {
   player.rotation = state.player.angle;
   // Move bombs
   bombs.position.set(offsetX, offsetY);
+  // Move and decay exhaust
+  exhaustLayer.position.set(offsetX, offsetY);
+  for (var i = 0; i < exhaustLayer.children.length; i++) {
+    var clip = exhaustLayer.children[i];
+    // if clip is at final frame, destroy it
+    if (clip.currentFrame === clip.totalFrames - 1) {
+      exhaustLayer.removeChild(clip);
+      clip.destroy();
+    } else {
+      // else, move it
+      clip.position.x += clip.vel.x * deltaTime;
+      clip.position.y += clip.vel.y * deltaTime;
+    }
+  }
   // Move and decay trails
   trails.position.set(offsetX, offsetY);
   for (var i = 0; i < trails.children.length; i++) {
@@ -127,11 +145,14 @@ function animate () {
     grid.position.set(offsetX, offsetY);
   }
   renderer.render(stage);
+  elapsed = now;
 }
 
 
 // PORT EVENTS
 
+var lastExhaust = 0;
+var exhaustForce = 70;
 
 app.ports.broadcast.subscribe(function (newState) {
   // Play engine sound if user is accelerating
@@ -139,21 +160,35 @@ app.ports.broadcast.subscribe(function (newState) {
     sounds.engine.pause();
   } else {
     sounds.engine.play();
+    // FIXME: All this logic on the JS side is nasty
+    // Show a puff of exhaust no more than every 50ms
+    if (Date.now() - lastExhaust > 50) {
+      var exhaust = sprites.exhaustClip();
+      var pos = belt.tail(state.player.pos.x, state.player.pos.y, state.player.angle);
+      exhaust.position.set(pos.x, pos.y);
+      var reversing = false; // TODO
+      exhaust.vel = {
+        x: exhaustForce * Math.sin(state.player.angle + (reversing ? 0 : Math.PI)),
+        y: exhaustForce * -Math.cos(state.player.angle + (reversing ? 0 : Math.PI))
+      };
+      exhaustLayer.addChild(exhaust);
+      lastExhaust = elapsed;
+    }
   }
   // If any oldState bombs aren't in the newState, then remove them
   for (var id in state.bombs) {
     if (!newState.bombs[id]) {
       // remove bomb
-      var sprite = sprites[id];
+      var sprite = spriteStore[id];
       bombs.removeChild(sprite);
       sprite.destroy();
-      delete sprites[id];
+      delete spriteStore[id];
     }
   }
   // Upsert newState bombs
   for (var id in newState.bombs) {
     var data = newState.bombs[id];
-    var sprite = sprites[id];
+    var sprite = spriteStore[id];
     if (sprite) {
       // If there is a sprite, update it
       var trail = makeTrail(sprite.position.x, sprite.position.y, sprite.width / 3);
@@ -161,8 +196,8 @@ app.ports.broadcast.subscribe(function (newState) {
       sprite.position.set(data.pos.x, data.pos.y);
     } else {
       // Else create it
-      sprite = bombSprite('B', 3);
-      sprites[data.id] = sprite;
+      sprite = bombSprite('B', 2);
+      spriteStore[data.id] = sprite;
       bombs.addChild(sprite);
     }
   }
