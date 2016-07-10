@@ -10,7 +10,7 @@ import Collage
 -- 1st
 import Vec exposing (Vec)
 import Tile exposing (Tile, Kind(..))
-import Util
+import Util exposing ((=>))
 
 
 type alias TileGridRecord =
@@ -279,7 +279,13 @@ encode grid =
         Box ->
           True
   in
-    allTiles grid
-    |> List.filter isBox
-    |> List.map Tile.encode
-    |> JE.list
+    JE.object
+      [ "height" => JE.int (height grid)
+      , "width" => JE.int (width grid)
+      , "tiles" =>
+          ( allTiles grid
+            |> List.filter isBox
+            |> List.map Tile.encode
+            |> JE.list
+          )
+      ]

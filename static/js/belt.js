@@ -5,6 +5,11 @@ exports.randNth = function (items) {
   return items[Math.floor(Math.random() * items.length)];
 };
 
+// inclusive both ends
+exports.randInt = function (min, max) {
+  return Math.floor(Math.random() * max) + min;
+};
+
 // FIXME: It's starting to get gross duplicating logic on the JS side.
 
 exports.nose = function (x, y, rads) {

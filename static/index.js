@@ -45,6 +45,14 @@ var state = {
   bombs: {}
 };
 
+// Grid state
+// So far used to give client access to the px height and width
+var tileGrid = {
+  height: null,
+  width: null,
+  tiles: {}
+};
+
 // Sprite store
 var spriteStore = {};
 
@@ -102,6 +110,9 @@ stage.addChild(exhaustLayer);
 var empburstLayer = new PIXI.Container();
 stage.addChild(empburstLayer);
 
+// Greens
+var greenLayer = new PIXI.Container();
+stage.addChild(greenLayer);
 
 
 // RENDER
@@ -124,6 +135,8 @@ function update () {
   player.rotation = state.player.angle;
   // Move bombs
   bombs.position.set(offsetX, offsetY);
+  // Move greens
+  greenLayer.position.set(offsetX, offsetY);
   // Move and decay exhaust
   exhaustLayer.position.set(offsetX, offsetY);
   for (var i = 0; i < exhaustLayer.children.length; i++) {
@@ -223,10 +236,11 @@ app.ports.broadcast.subscribe(function (newState) {
   state = newState;
 });
 
-app.ports.grid.subscribe(function (blocks) {
+app.ports.grid.subscribe(function (data) {
   // short-circuit on hot-reload
   if (grid.children.length > 0) return;
-  blocks.forEach(function (block) {
+  tileGrid = data;
+  data.tiles.forEach(function (block) {
     var sprite = new PIXI.Sprite.fromImage('./img/wall.png');
     sprite.anchor.set(0.5);
     sprite.width = 16;
@@ -234,6 +248,14 @@ app.ports.grid.subscribe(function (blocks) {
     sprite.position.set(block.pos.x, block.pos.y);
     grid.addChild(sprite);
   });
+  // Now that the grid is loaded, we can access its dimensions
+  // Create random greens, just for visuals
+  for (var i = 0; i < 50; i++) {
+    var x = belt.randInt(16, tileGrid.width - 50);
+    var y = belt.randInt(16, tileGrid.height - 50);
+    var clip = sprites.greenClip(x, y);
+    greenLayer.addChild(clip);
+  }
 });
 
 app.ports.bombHitWall.subscribe(function (bomb) {
