@@ -10,6 +10,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Time exposing (Time)
 import Color
+import Json.Encode as JE
 -- 3rd
 import Keyboard.Extra as KE
 import Collage
@@ -22,61 +23,54 @@ import TileGrid exposing (TileGrid)
 import Util
 import Starfield exposing (Starfield)
 import Ship
+import Bombs exposing (Bomb)
 
 
 -- MODEL
 
 
--- A cache of our Collage.Forms so all we need to do is transform
--- them instead of rebuilding them every update.
-type alias Gfx =
-  { starfield : Collage.Form
-  , tileGrid : Collage.Form
-  , ship : Collage.Form
-  }
-
-
 type alias Model =
-  { player : Player.Model
+  { nextId : Int
+  , player : Player.Model
   , tileGrid : TileGrid
   , keyboard : KE.Model
   , prevTick : Maybe Time
   , ticking : Bool
-  , viewport : { x : Int, y : Int }
   , lastCollision : Vec
   , starfield : Starfield
-  , gfx : Gfx
   , collision : Maybe TileGrid.CollisionResult
+  , bombs : List Bomb
+  , bombTime : Float
   -- DEBUG
   , showNeighbors : Bool
   }
 
 
-init : { viewport : { x : Int, y: Int } } -> (Model, Cmd Msg)
-init {viewport} =
+init : x -> (Model, Cmd Msg)
+init _ =
   let
     (kbModel, kbCmd) = KE.init
     starfield = Starfield.init 2 600 "./img/starfield.jpg"
     tileGrid = TileGrid.default
   in
-    ( { player = Player.init (Vec.make 100 100)
+    ( { nextId = 1
+      , player = Player.init (Vec.make 100 100)
       , tileGrid = tileGrid
       , keyboard = kbModel
       , prevTick = Nothing
       , ticking = True
-      , viewport = viewport
       , lastCollision = Vec.make 0 0
       , starfield = starfield
-      , gfx =
-          { starfield = Starfield.toForm viewport starfield
-          , tileGrid = TileGrid.toForm (Util.toCoord viewport) tileGrid
-          , ship = Ship.toForm
-          }
       , collision = Nothing
+      , bombs = []
+      , bombTime = 0
       -- DEBUG
       , showNeighbors = False
       }
-    , Cmd.map Keyboard kbCmd
+    , Cmd.batch
+        [ Cmd.map Keyboard kbCmd
+        , grid (JE.encode 0 (TileGrid.encode tileGrid))
+        ]
     )
 
 
@@ -87,7 +81,6 @@ type Msg
   = NoOp
   | Keyboard KE.Msg
   | Tick Time
-  | ViewportResized { x : Int, y : Int }
   | ToggleTick
   | ToggleNeighbors Bool
 
@@ -112,43 +105,29 @@ update msg model =
         Just prev ->
           let
             -- Seconds since last tick
-            delta : Time
             delta = Time.inSeconds (now - prev)
             (player', result) =
               Player.tick delta model.keyboard model.tileGrid model.player
+            bombs = Bombs.tick delta model.bombs
+            (bombs', bombTime, id') =
+              if KE.isPressed KE.CharF model.keyboard && model.bombTime >= 0 then
+                ( Bombs.fire model.nextId model.player bombs,
+                  -1.0,
+                  model.nextId + 1
+                )
+              else
+                (bombs, model.bombTime + delta, model.nextId)
           in
             ( { model
                   | player = player'
                   , prevTick = Just now
                   , collision = Just result
-                  -- , ticking =
-                  --     if result.dirs.left || result.dirs.right
-                  --        || result.dirs.top || result.dirs.bottom then
-                  --       False
-                  --     else
-                  --       model.ticking
-                  -- , lastCollision =
-                  --     case maybeTile of
-                  --       Nothing -> model.lastCollision
-                  --       Just vector -> vector
+                  , bombs = bombs'
+                  , nextId = id'
+                  , bombTime = bombTime
               }
-            , Cmd.none
+            , broadcast (encodeBroadcast model)
             )
-    ViewportResized viewport' ->
-      let
-        gfx = model.gfx
-        gfx' =
-          { gfx
-              | starfield = Starfield.toForm viewport' model.starfield
-              , tileGrid = TileGrid.toForm (Util.toCoord viewport') model.tileGrid
-          }
-      in
-        ( { model
-              | viewport = viewport'
-              , gfx = gfx'
-          }
-        , Cmd.none
-        )
     ToggleNeighbors val ->
       ({ model | showNeighbors = val }, Cmd.none)
     ToggleTick ->
@@ -160,88 +139,61 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  let
-    shipCoord =
-      Util.toCoord model.viewport model.player.pos
-    -- Show the tiles that will be checked for collision
-    neighbors =
-      if model.showNeighbors then
-        [ TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
-          |> List.map
-              (\tile ->
-                  Collage.square 16
-                  |> Collage.outlined  (Collage.solid Color.yellow)
-                  |> Collage.move (Util.toCoord model.viewport tile.pos)
-              )
-          |> Collage.group
-          |> Collage.moveX -(fst shipCoord)
-          |> Collage.moveY -(snd shipCoord)
-        ]
-      else
+  div
+  []
+  [ div
+    [ class "overlay" ]
+    [ button
+      [ class "btn btn-default"
+      , onClick ToggleTick
+      ]
+      [ text <| if model.ticking then "Pause" else "Unpause" ]
+    , ul
+      []
+      [ li [] [ text <| "pos: " ++ Vec.show 0 model.player.pos ]
+      , li [] [ text <| "vel: " ++ Vec.show 2 model.player.vel ]
+      , li [] [ text <| "acc: " ++ Vec.show 2 model.player.acc ]
+      , li
         []
-    stage =
-      List.concat
-        [ [ Starfield.transform model.player.pos model.gfx.starfield model.starfield
-          , TileGrid.transform model.viewport model.player.pos model.gfx.tileGrid
-          , Ship.transform model.player.angle model.gfx.ship
-          ]
-        , neighbors
+        [ text <|
+            "spd: " ++ (Numeral.format "0.00" (Vec.length model.player.vel))
         ]
-      |> Collage.collage model.viewport.x model.viewport.y
-      |> Element.toHtml
-  in
-    div
-    []
-    [ stage
-    , div
-      [ class "overlay" ]
-      [ button
-        [ class "btn btn-default"
-        , onClick ToggleTick
-        ]
-        [ text <| if model.ticking then "Pause" else "Unpause" ]
-      , ul
+      , li [] [ text <| "angle: " ++ (Numeral.format "0.00" model.player.angle) ]
+      , li
         []
-        [ li [] [ text <| "pos: " ++ Vec.show 0 model.player.pos ]
-        , li [] [ text <| "vel: " ++ Vec.show 2 model.player.vel ]
-        , li [] [ text <| "acc: " ++ Vec.show 2 model.player.acc ]
-        , li
-          []
-          [ text <|
-              "spd: " ++ (Numeral.format "0.00" (Vec.length model.player.vel))
-          ]
-        , li [] [ text <| "angle: " ++ (Numeral.format "0.00" model.player.angle) ]
-        , li
-          []
-          [ text
-              <| "collisions: " ++
-                 case model.collision of
-                   Nothing -> "--"
-                   Just result -> TileGrid.showCollisionResult result
-          ]
-        , li
-          []
-          [ div
-            [ class "checkbox" ]
-            [ label
-              []
-              [ input
-                [ type' "checkbox"
-                , onCheck ToggleNeighbors
-                ]
-                []
-              , text "Show collision-check"
+        [ text
+            <| "collisions: " ++
+                case model.collision of
+                  Nothing -> "--"
+                  Just result -> TileGrid.showCollisionResult result
+        ]
+      , li
+        []
+        [ text <| "bombs: " ++ toString (List.length model.bombs) ]
+      , li
+        []
+        [ text <| "bombTime: " ++ toString model.bombTime ]
+      , li
+        []
+        [ div
+          [ class "checkbox" ]
+          [ label
+            []
+            [ input
+              [ type' "checkbox"
+              , onCheck ToggleNeighbors
               ]
+              []
+            , text "Show collision-check"
             ]
           ]
         ]
       ]
     ]
+  ]
 
 
 -- SUBSCRIPTIONS
-
-port resizes : ({ x : Int, y : Int } -> msg) -> Sub msg
 
 
 subscriptions : Model -> Sub Msg
@@ -250,16 +202,34 @@ subscriptions model =
     Sub.batch
       [ Sub.map Keyboard KE.subscriptions
       , Time.every (Time.millisecond * 20) Tick
-      , resizes ViewportResized
       ]
   else
     Sub.batch
       [ Sub.map Keyboard KE.subscriptions
-      , resizes ViewportResized
       ]
 
 
-main : Program { viewport : { x : Int, y : Int } }
+-- PORTS
+
+
+encodeBroadcast : Model -> String
+encodeBroadcast model =
+  JE.object
+    [ ("player", Player.encode model.player)
+    , ("bombs", (Bombs.encodeN model.bombs))
+    ]
+  |> JE.encode 0
+
+
+port broadcast : String -> Cmd msg
+port newBomb : String -> Cmd msg
+port grid : String -> Cmd msg
+
+
+-- MAIN
+
+
+main : Program ()
 main =
   Html.App.programWithFlags
     { init = init

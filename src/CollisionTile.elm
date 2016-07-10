@@ -40,14 +40,3 @@ make x y tileSize kind =
       , bottom = toFloat y + radius
       }
   }
-
-
-draw : CollisionTile -> Maybe Collage.Form
-draw tile =
-  case tile.kind of
-    Empty ->
-      Nothing
-    Box ->
-      Element.image 16 16 "./img/wall.png"
-      |> Collage.toForm
-      |> Just

@@ -4,13 +4,13 @@ module Player exposing (..)
 
 -- Elm
 import Time exposing (Time)
+import Json.Encode as JE
 -- 3rd
 import Keyboard.Extra as KE
 -- 1st
 import Util
 import Vec exposing (Vec)
 import Friction
-import CollisionMap exposing (CollisionMap)
 import TileGrid exposing (TileGrid)
 
 
@@ -47,8 +47,7 @@ init pos =
   }
 
 
--- delta is seconds
-tick : Time -> KE.Model -> TileGrid -> Model -> (Model, TileGrid.CollisionResult)
+tick : Float -> KE.Model -> TileGrid -> Model -> (Model, TileGrid.CollisionResult)
 tick delta keys tileGrid model =
   let
     nextSubangle =
@@ -115,10 +114,20 @@ tick delta keys tileGrid model =
     )
 
 
-
 enforceMaxSpeed : Float -> Vec -> Vec
 enforceMaxSpeed maxSpeed vel =
   if Vec.length vel > maxSpeed then
     Vec.multiply (maxSpeed / Vec.length vel) vel
   else
     vel
+
+
+-- JSON
+
+
+encode : Model -> JE.Value
+encode {pos, angle} =
+  JE.object
+    [ ("pos", Vec.encode pos)
+    , ("angle", JE.float (degrees angle))
+    ]

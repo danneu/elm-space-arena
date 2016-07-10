@@ -4,6 +4,7 @@ module Tile exposing (..)
 
 -- Elm
 import Color
+import Json.Encode as JE
 -- 3rd
 import Collage
 import Element
@@ -27,16 +28,11 @@ type alias Tile =
   }
 
 
--- RENDER
+-- JSON
 
 
--- Returns Nothing if the Tile does not render as anything (transparent)
-draw : Tile -> Maybe Collage.Form
-draw tile =
-  case tile.kind of
-    Empty ->
-      Nothing
-    Box ->
-      Element.image 16 16 "./img/wall.png"
-      |> Collage.toForm
-      |> Just
+encode : Tile -> JE.Value
+encode {pos} =
+  JE.object
+    [ ("pos", Vec.encode pos)
+    ]

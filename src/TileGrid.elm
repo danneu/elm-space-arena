@@ -4,6 +4,7 @@ module TileGrid exposing (..)
 
 -- Elm
 import Dict exposing (Dict)
+import Json.Encode as JE
 -- 3rd
 import Collage
 -- 1st
@@ -267,49 +268,20 @@ trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
         }
 
 
--- RENDER
+-- ENCODE
 
 
-toForm : (Vec -> (Float, Float)) -> TileGrid -> Collage.Form
-toForm toCoord ({dict} as grid) =
-  Dict.values dict
-  |> List.map (\tile ->
-       case Tile.draw tile of
-         Nothing ->
-           Nothing
-         Just form ->
-           form
-           |> Collage.move (toCoord tile.pos)
-           |> Just
-     )
-  |> List.filter Util.isJust
-  |> List.map Util.unwrapMaybe
-  |> Collage.group
-
-
-transform : { x : Int, y : Int } -> Vec -> Collage.Form -> Collage.Form
-transform viewport shipPos form =
+encode : TileGrid -> JE.Value
+encode grid =
   let
-    shipCoord = Util.toCoord viewport shipPos
+    isBox tile =
+      case tile.kind of
+        Empty ->
+          False
+        Box ->
+          True
   in
-    form
-    |> Collage.moveX -(fst shipCoord)
-    |> Collage.moveY -(snd shipCoord)
-
-
--- OLD
--- draw : (Vec -> (Float, Float)) -> TileGrid -> Collage.Form
--- draw toCoord ({dict} as grid) =
---   Dict.values dict
---   |> List.map (\tile ->
---        case Tile.draw tile of
---          Nothing ->
---            Nothing
---          Just form ->
---            form
---            |> Collage.move (toCoord tile.pos)
---            |> Just
---      )
---   |> List.filter Util.isJust
---   |> List.map Util.unwrapMaybe
---   |> Collage.group
+    allTiles grid
+    |> List.filter isBox
+    |> List.map Tile.encode
+    |> JE.list

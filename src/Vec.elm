@@ -3,6 +3,7 @@ module Vec exposing (..)
 
 -- Elm
 import String
+import Json.Encode as JE
 -- 3rd
 import Numeral
 
@@ -88,3 +89,14 @@ show decimalPad (x, y) =
       Numeral.format ("0,0" ++ suffix) n
   in
     "(" ++ format x ++ ", " ++ format y ++ ")"
+
+
+-- JSON
+
+
+encode : Vec -> JE.Value
+encode (x, y) =
+  JE.object
+    [ ("x", JE.float x)
+    , ("y", JE.float y)
+    ]
