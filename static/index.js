@@ -109,6 +109,7 @@ function animate () {
 
 app.ports.broadcast.subscribe(function (json) {
   var newState = JSON.parse(json);
+  // If any oldState bombs aren't in the newState, then remove them
   for (var id in state.bombs) {
     if (!newState.bombs[id]) {
       // remove bomb
@@ -118,6 +119,7 @@ app.ports.broadcast.subscribe(function (json) {
       delete sprites[id];
     }
   }
+  // Upsert newState bombs
   for (var id in newState.bombs) {
     var data = newState.bombs[id];
     var sprite = sprites[id];
@@ -136,7 +138,6 @@ app.ports.broadcast.subscribe(function (json) {
 
 app.ports.grid.subscribe(function (json) {
   var blocks = JSON.parse(json);
-  console.log('got grid', blocks);
   grid = new PIXI.Container();
   blocks.forEach(function (block) {
     var sprite = new PIXI.Sprite.fromImage('./img/wall.png');
@@ -183,7 +184,7 @@ function bombSprite (kind, level) {
   var clip = new PIXI.extras.MovieClip(textures);
   clip.animationSpeed = 0.10;
   clip.anchor.set(0.5);
-  clip.scale.set(1.5, 1.5);
+  clip.scale.set(1.5);
   clip.play();
   return clip;
 }
