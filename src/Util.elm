@@ -50,9 +50,6 @@ toCoord viewport (x, y) =
   (x - (toFloat viewport.x / 2), (toFloat viewport.y / 2) - y)
 
 
--- Lifts a msg into a cmd that resolves that msg
---
--- Ex: (model, toCmd Refresh)
-toCmd : msg -> Cmd msg
-toCmd msg =
-  Task.perform identity identity (Task.succeed msg)
+(=>) : a -> b -> (a, b)
+(=>) a b =
+  (a, b)

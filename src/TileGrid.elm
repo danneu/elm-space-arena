@@ -163,11 +163,11 @@ collides size1 ((x1, y1) as pos1) size2 ((x2, y2) as pos2) =
 
 
 -- vel should already be adjusted by delta time
-moveY : Int -> Vec -> Vec -> Int -> List Tile
+moveY : Float -> Int -> Vec -> Vec -> Int -> List Tile
         -> { finalPosY : Float, top : Bool, bottom : Bool }
-moveY size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
+moveY delta size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
   let
-    (testX, testY) = Vec.add prevPos (0, vy)
+    (testX, testY) = Vec.add prevPos (Vec.multiply delta (0, vy))
     accum tiles =
       case tiles of
         -- No collisions
@@ -202,12 +202,11 @@ moveY size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
     accum neighbors
 
 
--- vel should already be adjusted by delta time
-moveX : Int -> Vec -> Vec -> Int -> List Tile
+moveX : Float -> Int -> Vec -> Vec -> Int -> List Tile
         -> { finalPosX : Float, left : Bool, right : Bool }
-moveX size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
+moveX delta size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
   let
-    (testX, testY) = Vec.add prevPos (vx, 0)
+    (testX, testY) = Vec.add prevPos (Vec.multiply delta (vx, 0))
     accum tiles =
       case tiles of
         -- No collisions
@@ -242,10 +241,9 @@ moveX size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
     accum neighbors
 
 
--- vel should already be adjusted by delta time
 -- size is entity side length (assumed square)
-trace : Int -> Vec -> Vec -> TileGrid -> CollisionResult
-trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
+trace : Float -> Int -> Vec -> Vec -> TileGrid -> CollisionResult
+trace delta size ((x, y) as prevPos) ((vx, vy) as vel) grid =
   -- { pos = Vec.add prevPos vel
   -- , dirs = { left = False, right = False, top = False, bottom = False }
   -- }
@@ -260,8 +258,10 @@ trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
             (toFloat size / 2 + toFloat grid.tileSize / 2)
             prevPos
             grid
-        {finalPosY, top, bottom} = moveY size prevPos vel grid.tileSize neighbors
-        {finalPosX, left, right} = moveX size prevPos vel grid.tileSize neighbors
+        {finalPosY, top, bottom} =
+          moveY delta size prevPos vel grid.tileSize neighbors
+        {finalPosX, left, right} =
+          moveX delta size prevPos vel grid.tileSize neighbors
       in
         { dirs = { left = left, right = right, top = top, bottom = bottom }
         , pos = Vec.make finalPosX finalPosY

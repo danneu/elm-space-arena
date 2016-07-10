@@ -11,6 +11,7 @@ import Html.Events exposing (..)
 import Time exposing (Time)
 import Color
 import Json.Encode as JE
+import Task
 -- 3rd
 import Keyboard.Extra as KE
 import Collage
@@ -20,8 +21,7 @@ import Numeral
 import Vec exposing (Vec)
 import Player
 import TileGrid exposing (TileGrid)
-import Util
-import Starfield exposing (Starfield)
+import Util exposing ((=>))
 import Ship
 import Bombs exposing (Bomb)
 
@@ -37,12 +37,9 @@ type alias Model =
   , prevTick : Maybe Time
   , ticking : Bool
   , lastCollision : Vec
-  , starfield : Starfield
   , collision : Maybe TileGrid.CollisionResult
   , bombs : List Bomb
   , bombTime : Float
-  -- DEBUG
-  , showNeighbors : Bool
   }
 
 
@@ -50,7 +47,6 @@ init : x -> (Model, Cmd Msg)
 init _ =
   let
     (kbModel, kbCmd) = KE.init
-    starfield = Starfield.init 2 600 "./img/starfield.jpg"
     tileGrid = TileGrid.default
   in
     ( { nextId = 1
@@ -60,12 +56,9 @@ init _ =
       , prevTick = Nothing
       , ticking = True
       , lastCollision = Vec.make 0 0
-      , starfield = starfield
       , collision = Nothing
       , bombs = []
       , bombTime = 0
-      -- DEBUG
-      , showNeighbors = False
       }
     , Cmd.batch
         [ Cmd.map Keyboard kbCmd
@@ -82,7 +75,7 @@ type Msg
   | Keyboard KE.Msg
   | Tick Time
   | ToggleTick
-  | ToggleNeighbors Bool
+  | ResetPrevTick Time
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -93,11 +86,18 @@ update msg model =
     Keyboard kbMsg ->
       let
         (kbModel, kbCmd) = KE.update kbMsg model.keyboard
+        (model', cmd) =
+          if KE.isPressed KE.Space kbModel then
+            update ToggleTick model
+          else
+            update NoOp model
       in
-        { model
+        { model'
             | keyboard = kbModel
         }
-        ! [Cmd.map Keyboard kbCmd]
+        ! [ Cmd.map Keyboard kbCmd
+          , cmd
+          ]
     Tick now ->
       case model.prevTick of
         Nothing ->
@@ -128,10 +128,24 @@ update msg model =
               }
             , broadcast (encodeBroadcast model)
             )
-    ToggleNeighbors val ->
-      ({ model | showNeighbors = val }, Cmd.none)
+    ResetPrevTick now ->
+      ({ model | prevTick = Just now }, Cmd.none)
     ToggleTick ->
-      ({ model | ticking = not model.ticking }, Cmd.none)
+      let
+        -- If transitioning from pause -> unpause, then reset the
+        -- prevTick so that we don't calculate positions from
+        -- the time before the pause.
+        cmd =
+          if model.ticking then
+            Cmd.none
+          else
+            Task.perform identity ResetPrevTick Time.now
+      in
+        ( { model
+              | ticking = not model.ticking
+          }
+        , cmd
+        )
 
 
 -- VIEW
@@ -148,6 +162,12 @@ view model =
       , onClick ToggleTick
       ]
       [ text <| if model.ticking then "Pause" else "Unpause" ]
+    , p
+      [ style [ "display" => "inline-block"
+              , "margin-left" => "10px"
+              ]
+      ]
+      [ text "Arrows to move, F to bomb, Spacebar to pause" ]
     , ul
       []
       [ li [] [ text <| "pos: " ++ Vec.show 0 model.player.pos ]
@@ -170,24 +190,6 @@ view model =
       , li
         []
         [ text <| "bombs: " ++ toString (List.length model.bombs) ]
-      , li
-        []
-        [ text <| "bombTime: " ++ toString model.bombTime ]
-      , li
-        []
-        [ div
-          [ class "checkbox" ]
-          [ label
-            []
-            [ input
-              [ type' "checkbox"
-              , onCheck ToggleNeighbors
-              ]
-              []
-            , text "Show collision-check"
-            ]
-          ]
-        ]
       ]
     ]
   ]
@@ -198,15 +200,14 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  if model.ticking then
-    Sub.batch
-      [ Sub.map Keyboard KE.subscriptions
-      , Time.every (Time.millisecond * 20) Tick
+    List.concat
+      [ if model.ticking then
+          [ Time.every (Time.millisecond * 20) Tick ]
+        else
+          []
+      , [ Sub.map Keyboard KE.subscriptions ]
       ]
-  else
-    Sub.batch
-      [ Sub.map Keyboard KE.subscriptions
-      ]
+    |> Sub.batch
 
 
 -- PORTS

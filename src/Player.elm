@@ -27,6 +27,7 @@ type alias Model =
     -- a hallway or aim through a hole in the wall.
   , angle : Float
   , thrust : Float
+  , mass : Float
   , turnPerSecond : Float
   , maxSpeed : Float
   , friction : Float
@@ -40,9 +41,10 @@ init pos =
   , acc = Vec.make 0 0
   , subangle = 0
   , angle = 0
-  , thrust = 200
+  , thrust = 1200 -- aka force
+  , mass = 5
   , turnPerSecond = 250 -- Degrees the ship can turn per second
-  , maxSpeed = 3
+  , maxSpeed = 200
   , friction = 0.25 -- The % of velocity lost per second
   }
 
@@ -60,16 +62,17 @@ tick delta keys tileGrid model =
     nextAngle =
       toFloat <| Util.nearestMultiple 9 nextSubangle
     nextAcc =
-      (
-      if KE.isPressed KE.ArrowUp keys then
-        Vec.fromDeg model.angle
-      else if KE.isPressed KE.ArrowDown keys then
-        Vec.fromDeg model.angle
-        |> Vec.multiply -1
-      else
-        Vec.make 0 0
-      )
-      |> Vec.multiply (delta * model.thrust)
+      let
+        base =
+          if KE.isPressed KE.ArrowUp keys then
+            Vec.fromDeg model.angle
+          else if KE.isPressed KE.ArrowDown keys then
+            Vec.fromDeg model.angle
+            |> Vec.reverse
+          else
+            Vec.make 0 0
+      in
+        Vec.multiply (model.thrust / model.mass) base
     nextVel =
       Vec.multiply delta nextAcc
       |> Vec.add model.vel
@@ -82,7 +85,7 @@ tick delta keys tileGrid model =
         minBounceVel = 0.50
         -- TODO: Apply friction again when ship hits a wall so that they
         --       lose speed when sliding along a wall.
-        result = TileGrid.trace 30 model.pos nextVel tileGrid
+        result = TileGrid.trace delta 30 model.pos nextVel tileGrid
         (vx, vy) = nextVel
         vx' =
           if result.dirs.left || result.dirs.right then
@@ -120,6 +123,17 @@ enforceMaxSpeed maxSpeed vel =
     Vec.multiply (maxSpeed / Vec.length vel) vel
   else
     vel
+
+
+nose : Model -> Vec
+nose {pos, angle} =
+  let
+    r = 15
+    (x, y) = pos
+    noseX = x + r * (cos <| degrees <| angle - 90)
+    noseY = y + r * (sin <| degrees <| angle - 90)
+  in
+    Vec.make noseX noseY
 
 
 -- JSON

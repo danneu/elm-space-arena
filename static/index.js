@@ -1,6 +1,14 @@
 
-// pull in desired CSS/SASS files
+// CSS
+
 require('./css/main.scss');
+
+// JS
+
+// TODO: Even without `var PIXI = ...`, PIXI is available just by
+//       writing `require('pixi.js')`. Is there a way to change this behavior
+//       so that I must assign the return value to use PIXI?
+var PIXI = require('pixi.js');
 
 
 // UTIL
@@ -14,9 +22,17 @@ function getViewport () {
   };
 }
 
+// Get random item in an array
+function randomNth (items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
 
 // STORES
 
+
+// Viewport store
+var viewport = getViewport();
 
 // App state
 var state = {
@@ -41,19 +57,17 @@ var app = Elm.Main.embed(document.getElementById('main'), null);
 // PIXI
 
 
-require('./vendor/pixi-3.0.11.min.js');
-
 var stage = new PIXI.Stage(0x000000);
-var renderer = PIXI.autoDetectRenderer(getViewport().x, getViewport().y);
+var renderer = PIXI.autoDetectRenderer(viewport.x, viewport.y);
 document.body.appendChild(renderer.view);
 
 // Starfield
-var starfield = PIXI.extras.TilingSprite.fromImage('./img/starfield.jpg', getViewport().x, getViewport().y);
+var starfield = PIXI.extras.TilingSprite.fromImage('./img/starfield.jpg', viewport.x, viewport.y);
 stage.addChild(starfield);
 
 // Player
 var player = new PIXI.Sprite.fromImage('./img/warbird.gif');
-player.position.set(getViewport().x / 2, getViewport().y / 2);
+player.position.set(viewport.x / 2, viewport.y / 2);
 player.anchor.set(0.5);
 stage.addChild(player);
 
@@ -73,8 +87,8 @@ requestAnimationFrame(animate);
 function animate () {
   requestAnimationFrame(animate);
   // Camera offset, since we keep our player ship in the center
-  var offsetX = getViewport().x / 2 - state.player.pos.x;
-  var offsetY = getViewport().y / 2 - state.player.pos.y;
+  var offsetX = viewport.x / 2 - state.player.pos.x;
+  var offsetY = viewport.y / 2 - state.player.pos.y;
   // Animate starfield
   starfield.tilePosition.x = -state.player.pos.x / 2;
   starfield.tilePosition.y = -state.player.pos.y / 2;
@@ -140,8 +154,11 @@ app.ports.grid.subscribe(function (json) {
 
 
 window.onresize = function () {
-  var viewport = getViewport();
+  viewport = getViewport();
   renderer.resize(viewport.x, viewport.y);
+  player.position.set(viewport.x / 2, viewport.y / 2);
+  starfield.width = viewport.x;
+  starfield.height = viewport.y;
 };
 
 
@@ -151,6 +168,9 @@ window.onresize = function () {
 // kind is A | B | C
 // level is 1 | 2 | 3 | 4
 function bombSprite (kind, level) {
+  // Randomize if kind/level aren't set
+  kind = kind || randomNth(['A', 'B', 'C']);
+  level = level || Math.floor(Math.random() * 4 + 1);
   var base = new PIXI.Texture.fromImage('./img/bombs.gif');
   var textures = [];
   var rowIdx = { 'A': 0, 'B': 1, 'C': 2 };

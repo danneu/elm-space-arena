@@ -71,10 +71,15 @@ normalize ((x, y) as vec) =
 rotate : Float -> Vec -> Vec
 rotate angle (x, y) =
   let
-    c = cos angle
-    s = sin angle
+    c = cos (degrees angle)
+    s = sin (degrees angle)
   in
-  make (x * c + y * s) (y * c - x * s)
+    make -(x * c - y * s) -(x * s + y * c)
+
+
+reverse : Vec -> Vec
+reverse vector =
+  multiply -1 vector
 
 
 show : Int -> Vec -> String

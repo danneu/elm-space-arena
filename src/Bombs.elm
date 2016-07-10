@@ -13,7 +13,7 @@ type alias Bomb =
   { id : Int
   , pos : Vec
   , vel : Vec
-  , ttl : Float
+  , ttl : Float -- seconds that bomb stays in flight
   }
 
 
@@ -34,9 +34,7 @@ moveBomb : Float -> Bomb -> Bomb
 moveBomb delta bomb =
   let
     pos' =
-      -- FIXME
-      --Vec.multiply delta bomb.vel
-      bomb.vel
+      Vec.multiply delta bomb.vel
       |> Vec.add bomb.pos
     ttl' =
       bomb.ttl - delta
@@ -52,9 +50,11 @@ fire id player bombs =
   let
     bomb =
       { id = id
-      , pos = player.pos
+      , pos = Player.nose player
       , vel = player.vel
-      , ttl = 3
+              |> Vec.add (Vec.rotate player.angle (0, 200))
+
+      , ttl = 5
       }
   in
     bomb :: bombs

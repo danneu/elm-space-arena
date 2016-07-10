@@ -27,6 +27,13 @@ var commonConfig = {
         test: /\.(eot|ttf|woff|woff2|svg)$/,
         loader: 'file-loader'
       }
+    ],
+    // https://gist.github.com/danneu/17b6830df9d1a1fe2f5c983078fb4fee
+    postLoaders: [
+      {
+        include: path.resolve(__dirname, 'node_modules/pixi.js'),
+        loader: 'transform/cacheable?brfs'
+      }
     ]
   },
   plugins: [
@@ -60,7 +67,7 @@ if (TARGET_ENV === 'development') {
           loader: 'elm-hot!elm-webpack?verbose=true&warn=true'
         },
         {
-          test: /\.(css|scss)$/, 
+          test: /\.(css|scss)$/,
           loaders: ['style', 'css', 'postcss', 'sass']
         }
       ]
