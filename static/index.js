@@ -137,6 +137,8 @@ app.ports.broadcast.subscribe(function (json) {
 });
 
 app.ports.grid.subscribe(function (json) {
+  // short-circuit on hot-reload
+  if (grid) return;
   var blocks = JSON.parse(json);
   grid = new PIXI.Container();
   blocks.forEach(function (block) {
