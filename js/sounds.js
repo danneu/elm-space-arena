@@ -33,7 +33,11 @@ module.exports = {
   bounce: new Howl({
     urls: ['./sounds/bounce.mp3'],
   }),
-  bomb: (function () {
+  bombExplode: new Howl({
+    urls: ['./sounds/ebombex.mp3'],
+    volume: 0.3
+  }),
+  bombShoot: (function () {
     var _sounds = [
       //new Howl({urls: ['./sounds/bomb1.mp3'], volume: 0.1}),
       //new Howl({urls: ['./sounds/bomb2.mp3'], volume: 0.1}),
