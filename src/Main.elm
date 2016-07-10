@@ -223,7 +223,6 @@ encodeBroadcast model =
 
 
 port broadcast : String -> Cmd msg
-port newBomb : String -> Cmd msg
 port grid : String -> Cmd msg
 
 
