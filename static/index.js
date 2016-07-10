@@ -82,8 +82,8 @@ stage.addChild(greenLayer);
 // Player
 var player = new PIXI.Sprite.fromImage('./img/warbird.gif');
 player.position.set(viewport.x / 2, viewport.y / 2);
-stage.addChild(player);
 player.anchor.set(0.5);
+stage.addChild(player);
 
 // Grid
 // Gets loaded with tiles in the `grid` subscription once app sends us the tilegrid
@@ -109,6 +109,19 @@ stage.addChild(exhaustLayer);
 var empburstLayer = new PIXI.Container();
 stage.addChild(empburstLayer);
 
+
+// DEBUG
+
+
+/* setInterval(function () {
+ *   console.log({
+ *     bombs: bombs.children.length,
+ *     trails: trails.children.length,
+ *     exhaustLayer: exhaustLayer.children.length,
+ *     empburstLayer: empburstLayer.children.length
+ *   });
+ * }, 1000);
+ * */
 
 // RENDER
 
@@ -178,8 +191,10 @@ function update () {
 
 // PORT EVENTS
 
+// FIXME: This is getting scatterbrained and lazy
 var lastExhaust = 0;
 var exhaustForce = 70;
+var lastTrail = 0;
 
 app.ports.broadcast.subscribe(function (newState) {
   // Play engine sound if user is accelerating
@@ -199,7 +214,7 @@ app.ports.broadcast.subscribe(function (newState) {
         y: exhaustForce * -Math.cos(state.player.angle + (reversing ? 0 : Math.PI))
       };
       exhaustLayer.addChild(exhaust);
-      lastExhaust = elapsed;
+      lastExhaust = Date.now();
     }
   }
   // If any oldState bombs aren't in the newState, then remove them
@@ -218,8 +233,13 @@ app.ports.broadcast.subscribe(function (newState) {
     var sprite = spriteStore[id];
     if (sprite) {
       // If there is a sprite, update it
-      var trail = makeTrail(sprite.position.x, sprite.position.y, sprite.width / 3);
-      trails.addChild(trail);
+      // And only make a trail every 50ms
+      if (Date.now() - lastTrail > 50) {
+        var trail =
+          makeTrail(sprite.position.x, sprite.position.y, sprite.width / 3);
+        trails.addChild(trail);
+        lastTrail = Date.now();
+      }
       sprite.position.set(data.pos.x, data.pos.y);
     } else {
       // Else create it
@@ -239,7 +259,7 @@ app.ports.grid.subscribe(function (data) {
     if (tile.kind === 'BOX') {
       sprite = new PIXI.extras.TilingSprite.fromImage('./img/wall.png', 16, 16);
     } else if (tile.kind === 'EMPTY') {
-      sprite = new PIXI.extras.TilingSprite(PIXI.Texture.EMPTY, 16, 16)
+      sprite = new PIXI.extras.TilingSprite(PIXI.Texture.EMPTY, 16, 16);
     }
     sprite.anchor.set(0.5);
     sprite.position.set(tile.pos.x, tile.pos.y);
