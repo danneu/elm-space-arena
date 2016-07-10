@@ -253,7 +253,17 @@ view model =
               , "margin-left" => "10px"
               ]
       ]
-      [ text "Arrows to move, F to bomb, Spacebar to pause, Click to toggle walls" ]
+      [ text "Arrows to move, F to bomb, Spacebar to pause, Click to toggle walls."
+      ]
+    , p
+      []
+      [ text "Source code: "
+      , a
+        [ style [ "color" => "#2ecc71" ]
+        , href "https://github.com/danneu/elm-space-arena"
+        ]
+        [ text "danneu/elm-space-arena" ]
+      ]
     , ul
       []
       [ li [] [ text <| "pos: " ++ Vec.show 1 model.player.pos ]
