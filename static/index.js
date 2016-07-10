@@ -14,6 +14,7 @@ var PIXI = require('pixi.js');
 var sounds = require('./js/sounds');
 var belt = require('./js/belt');
 var sprites = require('./js/sprites');
+var loader = require('./js/loader');
 
 
 // UTIL
@@ -37,7 +38,7 @@ var viewport = getViewport();
 // App state
 var state = {
   player: {
-    pos: { x: 0, y: 0 },
+    pos: { x: 100, y: 100 },
     vel: { x: 0, y: 0 },
     acc: { x: 0, y: 0 }, // so we know when to play the engine sound
     angle: 0
@@ -123,11 +124,22 @@ stage.addChild(empburstLayer);
  * }, 1000);
  * */
 
+
+// ASSET LOADER
+
+
+loader
+  // Begin render loop once assets are loaded
+  .once('complete', function () {
+    requestAnimationFrame(update);
+  })
+  .load();
+
+
 // RENDER
 
-var elapsed = Date.now();
 
-requestAnimationFrame(update);
+var elapsed = Date.now();
 
 function update () {
   requestAnimationFrame(update);
