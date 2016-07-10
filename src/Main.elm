@@ -47,6 +47,8 @@ type alias Model =
   , starfield : Starfield
   , gfx : Gfx
   , collision : Maybe TileGrid.CollisionResult
+  -- DEBUG
+  , showNeighbors : Bool
   }
 
 
@@ -71,6 +73,8 @@ init {viewport} =
           , ship = Ship.toForm
           }
       , collision = Nothing
+      -- DEBUG
+      , showNeighbors = False
       }
     , Cmd.map Keyboard kbCmd
     )
@@ -85,6 +89,7 @@ type Msg
   | Tick Time
   | ViewportResized { x : Int, y : Int }
   | ToggleTick
+  | ToggleNeighbors Bool
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -144,6 +149,8 @@ update msg model =
           }
         , Cmd.none
         )
+    ToggleNeighbors val ->
+      ({ model | showNeighbors = val }, Cmd.none)
     ToggleTick ->
       ({ model | ticking = not model.ticking }, Cmd.none)
 
@@ -156,23 +163,31 @@ view model =
   let
     shipCoord =
       Util.toCoord model.viewport model.player.pos
-    stage =
-      Collage.collage model.viewport.x model.viewport.y
-        [ Starfield.transform model.player.pos model.gfx.starfield model.starfield
-        , TileGrid.transform model.viewport model.player.pos model.gfx.tileGrid
-        , Ship.transform model.player.angle model.gfx.ship
-          -- Show the tiles that will be checked for collision
-        -- , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
-        --   |> List.map
-        --       (\tile ->
-        --           Collage.square 16
-        --           |> Collage.outlined  (Collage.solid Color.yellow)
-        --           |> Collage.move (Util.toCoord model.viewport tile.pos)
-        --       )
-        --   |> Collage.group
-        --   |> Collage.moveX -(fst shipCoord)
-        --   |> Collage.moveY -(snd shipCoord)
+    -- Show the tiles that will be checked for collision
+    neighbors =
+      if model.showNeighbors then
+        [ TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
+          |> List.map
+              (\tile ->
+                  Collage.square 16
+                  |> Collage.outlined  (Collage.solid Color.yellow)
+                  |> Collage.move (Util.toCoord model.viewport tile.pos)
+              )
+          |> Collage.group
+          |> Collage.moveX -(fst shipCoord)
+          |> Collage.moveY -(snd shipCoord)
         ]
+      else
+        []
+    stage =
+      List.concat
+        [ [ Starfield.transform model.player.pos model.gfx.starfield model.starfield
+          , TileGrid.transform model.viewport model.player.pos model.gfx.tileGrid
+          , Ship.transform model.player.angle model.gfx.ship
+          ]
+        , neighbors
+        ]
+      |> Collage.collage model.viewport.x model.viewport.y
       |> Element.toHtml
   in
     div
@@ -203,6 +218,21 @@ view model =
                  case model.collision of
                    Nothing -> "--"
                    Just result -> TileGrid.showCollisionResult result
+          ]
+        , li
+          []
+          [ div
+            [ class "checkbox" ]
+            [ label
+              []
+              [ input
+                [ type' "checkbox"
+                , onCheck ToggleNeighbors
+                ]
+                []
+              , text "Show collision-check"
+              ]
+            ]
           ]
         ]
       ]
