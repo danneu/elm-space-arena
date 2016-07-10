@@ -50,7 +50,7 @@ init {startTime} =
   let
     (kbModel, kbCmd) = KE.init
     seed = Random.initialSeed startTime
-    tileGrid = TileGrid.default
+    tileGrid = TileGrid.default 20 64 30
   in
     ( { nextId = 2
       , player = Player.init 1 (Vec.make 100 100)

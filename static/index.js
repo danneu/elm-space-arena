@@ -196,6 +196,9 @@ function update () {
   if (grid) {
     grid.position.set(offsetX, offsetY);
   }
+  // Cull tiles
+  // - naiveCull(viewport, grid);
+  // Render
   renderer.render(stage);
   elapsed = now;
 }
@@ -373,4 +376,26 @@ function connectTileSprite (sprite) {
 function onTileClick () {
   console.log('tile click', this.state.idx);
   app.ports.tileClicked.send([this.state.idx.x, this.state.idx.y]);
+}
+
+
+// CULL OBJECTS
+
+
+// FIXME: Too naive.
+function naiveCull (viewport, container) {
+  var halfX = viewport.x / 2;
+  var halfY = viewport.y / 2;
+  for (var i = 0; i < container.children.length; i++) {
+    var sprite = container.children[i];
+    if (sprite.position.x < state.player.pos.x - halfX
+        || sprite.position.x > state.player.pos.x + halfX
+        || sprite.position.y < state.player.pos.y - halfY
+        || sprite.position.y > state.player.pos.y + halfY
+    ) {
+      sprite.visible = false;
+    } else {
+      sprite.visible = true;
+    }
+  }
 }

@@ -26,8 +26,8 @@ type alias TileGridRecord =
 type alias TileGrid = TileGridRecord
 
 
-default : TileGrid
-default =
+default : Int -> Int -> Int -> TileGrid
+default rows cols maxGreens =
   let
     tileSize = 16
     xformTile : Int -> Int -> Int -> Tile.Kind -> ((Int, Int), Tile)
@@ -46,23 +46,27 @@ default =
       in
         List.indexedMap (xformTile y rowIdx) row
   in
-    List.concatMap identity
-      [ [List.repeat 64 Box]
-      , List.repeat 18 (List.concat [ [Box], (List.repeat 62 Empty), [Box] ])
-      , [List.repeat 64 Box]
-      ]
+    List.repeat rows (List.repeat cols Empty)
     |> List.indexedMap xformRow
     |> List.concatMap identity
     |> Dict.fromList
     |> (\dict ->
           { tileSize = tileSize
           , dict = dict
-          , rowCount = 20
-          , colCount = 64
+          , rowCount = rows
+          , colCount = cols
           , greenCount = 0
-          , maxGreens = 30
+          , maxGreens = maxGreens
           }
       )
+    -- Make outermost tiles into walls
+    |> map
+         (\ ((x, y) as idx) tile ->
+            if x == 0 || y == 0 || y == rows - 1 || x == cols - 1 then
+              { tile | kind = Tile.Box }
+            else
+              tile
+         )
 
 
 -- DIMENSIONS
@@ -78,6 +82,16 @@ width grid =
 height : TileGrid -> Int
 height grid =
   grid.tileSize * grid.rowCount
+
+
+-- TRANSFORM
+
+
+map : ((Int, Int) -> Tile -> Tile) -> TileGrid -> TileGrid
+map xform grid =
+  { grid
+      | dict = Dict.map xform grid.dict
+  }
 
 
 -- QUERY
@@ -263,7 +277,7 @@ trace : Float -> Int -> Vec -> Vec -> TileGrid -> CollisionResult
 trace delta size ((x, y) as prevPos) ((vx, vy) as vel) grid =
   case containingTile prevPos grid of
     Nothing ->
-      Debug.crash "Huh? Ship wasn't inside a tile?"
+      Debug.crash "FIXME: Entity tunneled through the outer wall"
     Just centerTile ->
       let
         -- Only need to collision-check nearby tiles
