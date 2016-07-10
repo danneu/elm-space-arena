@@ -86,6 +86,21 @@ allTiles {dict} =
   Dict.values dict
 
 
+-- Ex: tilesWithinPosRadius ship.size ship.pos => [...]
+tilesWithinPosRadius : Float -> Vec -> TileGrid -> List Tile
+tilesWithinPosRadius radius pos grid =
+  case containingTile pos grid of
+    Nothing ->
+      []
+    Just centerTile ->
+      let
+        pred tile =
+          collides (round (radius * 2)) pos tile.tileSize tile.pos
+      in
+        Dict.values grid.dict
+        |> List.filter pred
+
+
 -- Returns the tile that contains the given position vector.
 containingTile : Vec -> TileGrid -> Maybe Tile
 containingTile ((x, y) as pos) grid =
@@ -146,9 +161,9 @@ collides size1 ((x1, y1) as pos1) size2 ((x2, y2) as pos2) =
 
 
 -- vel should already be adjusted by delta time
-moveY : Int -> Vec -> Vec -> TileGrid
+moveY : Int -> Vec -> Vec -> Int -> List Tile
         -> { finalPosY : Float, top : Bool, bottom : Bool }
-moveY size ((x, y) as prevPos) ((vx, vy) as vel) grid =
+moveY size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
   let
     (testX, testY) = Vec.add prevPos (0, vy)
     accum tiles =
@@ -162,11 +177,11 @@ moveY size ((x, y) as prevPos) ((vx, vy) as vel) grid =
             Empty ->
               accum rest
             Box ->
-              if collides size (testX, testY) grid.tileSize tile.pos then
+              if collides size (testX, testY) tileSize tile.pos then
                 if vy < 0 then
                   -- Collided with tile above
                   --let _ = Debug.log "collided top" tile in
-                  { finalPosY = (snd tile.pos) + toFloat grid.tileSize / 2
+                  { finalPosY = (snd tile.pos) + toFloat tileSize / 2
                                 + toFloat size / 2
                   , top = True
                   , bottom = False
@@ -174,7 +189,7 @@ moveY size ((x, y) as prevPos) ((vx, vy) as vel) grid =
                 else
                   -- Collided with tile below
                   --let _ = Debug.log "collided bottom" tile in
-                  { finalPosY = (snd tile.pos) - toFloat grid.tileSize / 2
+                  { finalPosY = (snd tile.pos) - toFloat tileSize / 2
                                 - toFloat size / 2
                   , top = False
                   , bottom = True
@@ -182,13 +197,13 @@ moveY size ((x, y) as prevPos) ((vx, vy) as vel) grid =
               else
                 accum rest
   in
-    accum (allTiles grid)
+    accum neighbors
 
 
 -- vel should already be adjusted by delta time
-moveX : Int -> Vec -> Vec -> TileGrid
+moveX : Int -> Vec -> Vec -> Int -> List Tile
         -> { finalPosX : Float, left : Bool, right : Bool }
-moveX size ((x, y) as prevPos) ((vx, vy) as vel) grid =
+moveX size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
   let
     (testX, testY) = Vec.add prevPos (vx, 0)
     accum tiles =
@@ -202,11 +217,11 @@ moveX size ((x, y) as prevPos) ((vx, vy) as vel) grid =
             Empty ->
               accum rest
             Box ->
-              if collides size (testX, testY) grid.tileSize tile.pos then
+              if collides size (testX, testY) tileSize tile.pos then
                 if vx < 0 then
                   -- Collided with left tile
                   --let _ = Debug.log "collided left" tile in
-                  { finalPosX = (fst tile.pos) + toFloat grid.tileSize / 2
+                  { finalPosX = (fst tile.pos) + toFloat tileSize / 2
                                 + toFloat size / 2
                   , left = True
                   , right = False
@@ -214,7 +229,7 @@ moveX size ((x, y) as prevPos) ((vx, vy) as vel) grid =
                 else
                   -- Collided with right tile
                   --let _ = Debug.log "collided right" tile in
-                  { finalPosX = (fst tile.pos) - toFloat grid.tileSize / 2
+                  { finalPosX = (fst tile.pos) - toFloat tileSize / 2
                                 - toFloat size / 2
                   , left = False
                   , right = True
@@ -222,21 +237,25 @@ moveX size ((x, y) as prevPos) ((vx, vy) as vel) grid =
               else
                 accum rest
   in
-    accum (allTiles grid)
+    accum neighbors
 
 
 -- vel should already be adjusted by delta time
 -- size is entity side length (assumed square)
 trace : Int -> Vec -> Vec -> TileGrid -> CollisionResult
 trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
-  case containingTile prevPos of
+  case containingTile prevPos grid of
     Nothing ->
       Debug.crash "Huh? Ship wasn't inside a tile?"
     Just centerTile ->
       let
-        --neighbors = idxNeighbors tile.idx grid
-        {finalPosY, top, bottom} = moveY size prevPos vel grid
-        {finalPosX, left, right} = moveX size prevPos vel grid
+        neighbors =
+          tilesWithinPosRadius
+            (toFloat size / 2 + toFloat grid.tileSize / 2)
+            prevPos
+            grid
+        {finalPosY, top, bottom} = moveY size prevPos vel grid.tileSize neighbors
+        {finalPosX, left, right} = moveX size prevPos vel grid.tileSize neighbors
       in
         { dirs = { left = left, right = right, top = top, bottom = bottom }
         , pos = Vec.make finalPosX finalPosY

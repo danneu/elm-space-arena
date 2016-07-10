@@ -133,6 +133,17 @@ view model =
             |> Collage.moveX -(fst shipCoord)
             |> Collage.moveY -(snd shipCoord)
         , Ship.draw model.player.angle
+          -- Show the tiles that will be checked for collision
+        -- , TileGrid.tilesWithinPosRadius (15 + 8) model.player.pos model.tileGrid
+        --   |> List.map
+        --       (\tile ->
+        --           Collage.square 16
+        --           |> Collage.outlined  (Collage.solid Color.yellow)
+        --           |> Collage.move (Util.toCoord model.viewport tile.pos)
+        --       )
+        --   |> Collage.group
+        --   |> Collage.moveX -(fst shipCoord)
+        --   |> Collage.moveY -(snd shipCoord)
         ]
       |> Element.toHtml
   in
