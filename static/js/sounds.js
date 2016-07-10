@@ -39,10 +39,10 @@ module.exports = {
   }),
   bombShoot: new Howl({
     urls: ['./sounds/bomb3.mp3'],
-    volume: 0.1
+    volume: 0.25
   }),
   green: new Howl({
     urls: ['./sounds/prize.mp3'],
-    volume: 0.5
+    volume: 0.25
   })
 };
