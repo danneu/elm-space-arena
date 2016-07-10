@@ -126,7 +126,7 @@ app.ports.broadcast.subscribe(function (json) {
       sprite.position.set(data.pos.x, data.pos.y);
     } else {
       // Else create it
-      sprite = bombSprite('A', 1);
+      sprite = bombSprite();
       sprites[data.id] = sprite;
       bombs.addChild(sprite);
     }
