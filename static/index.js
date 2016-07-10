@@ -45,14 +45,6 @@ var state = {
   bombs: {}
 };
 
-// Grid state
-// So far used to give client access to the px height and width
-var tileGrid = {
-  height: null,
-  width: null,
-  tiles: {}
-};
-
 // Sprite store
 var spriteStore = {};
 
@@ -61,7 +53,10 @@ var spriteStore = {};
 
 
 var Elm = require('../src/Main');
-var app = Elm.Main.embed(document.getElementById('main'), null);
+var app = Elm.Main.embed(document.getElementById('main'), {
+  // Seed application with randomness
+  startTime: Date.now()
+});
 
 
 // PIXI
@@ -239,7 +234,6 @@ app.ports.broadcast.subscribe(function (newState) {
 app.ports.grid.subscribe(function (data) {
   // short-circuit on hot-reload
   if (grid.children.length > 0) return;
-  tileGrid = data;
   data.tiles.forEach(function (block) {
     var sprite = new PIXI.Sprite.fromImage('./img/wall.png');
     sprite.anchor.set(0.5);
@@ -248,14 +242,6 @@ app.ports.grid.subscribe(function (data) {
     sprite.position.set(block.pos.x, block.pos.y);
     grid.addChild(sprite);
   });
-  // Now that the grid is loaded, we can access its dimensions
-  // Create random greens, just for visuals
-  for (var i = 0; i < 50; i++) {
-    var x = belt.randInt(16, tileGrid.width - 50);
-    var y = belt.randInt(16, tileGrid.height - 50);
-    var clip = sprites.greenClip(x, y);
-    greenLayer.addChild(clip);
-  }
 });
 
 app.ports.bombHitWall.subscribe(function (bomb) {
@@ -264,6 +250,11 @@ app.ports.bombHitWall.subscribe(function (bomb) {
   clip.position.y = bomb.pos.y;
   empburstLayer.addChild(clip);
   sounds.bombExplode.play();
+});
+
+app.ports.greenSpawned.subscribe(function (tile) {
+  var clip = sprites.greenClip(tile.pos.x, tile.pos.y);
+  greenLayer.addChild(clip);
 });
 
 app.ports.playerHitWall.subscribe(function () {

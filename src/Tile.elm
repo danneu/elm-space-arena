@@ -25,6 +25,7 @@ type alias Tile =
   , pos : Vec    -- pixel location
   , tileSize : Int
   , kind : Kind
+  , green : Bool
   }
 
 
@@ -32,7 +33,8 @@ type alias Tile =
 
 
 encode : Tile -> JE.Value
-encode {pos} =
+encode {pos, green} =
   JE.object
     [ ("pos", Vec.encode pos)
+    , ("green", JE.bool green)
     ]

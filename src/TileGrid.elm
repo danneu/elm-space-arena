@@ -5,8 +5,7 @@ module TileGrid exposing (..)
 -- Elm
 import Dict exposing (Dict)
 import Json.Encode as JE
--- 3rd
-import Collage
+import Random
 -- 1st
 import Vec exposing (Vec)
 import Tile exposing (Tile, Kind(..))
@@ -18,6 +17,8 @@ type alias TileGridRecord =
   , dict : Dict (Int, Int) Tile
   , rowCount : Int
   , colCount : Int
+  , greenCount : Int
+  , maxGreens : Int
   }
 
 
@@ -35,7 +36,7 @@ default =
         x = colIdx * tileSize
         point = (colIdx, rowIdx)
         pos = (toFloat x, toFloat y)
-        tile = Tile point pos tileSize kind
+        tile = Tile point pos tileSize kind False
       in
         (point, tile)
     xformRow : Int -> (List Tile.Kind) -> (List ((Int, Int), Tile))
@@ -58,6 +59,8 @@ default =
           , dict = dict
           , rowCount = 20
           , colCount = 64
+          , greenCount = 0
+          , maxGreens = 50
           }
       )
 
@@ -78,6 +81,15 @@ height grid =
 
 
 -- QUERY
+
+
+contains : (Int, Int) -> TileGrid -> Bool
+contains idx {dict} =
+  case Dict.get idx dict of
+    Just _ ->
+      True
+    Nothing ->
+      False
 
 
 allTiles : TileGrid -> List Tile
@@ -262,6 +274,54 @@ trace delta size ((x, y) as prevPos) ((vx, vy) as vel) grid =
         { dirs = { left = left, right = right, top = top, bottom = bottom }
         , pos = Vec.make finalPosX finalPosY
         }
+
+insert : (Int, Int) -> Tile -> TileGrid -> TileGrid
+insert idx tile grid =
+  { grid
+      | dict = Dict.insert idx tile grid.dict
+  }
+
+-- updateTile : (Int, Int) -> (Tile -> Tile) -> TileGrid -> TileGrid
+-- updateTile idx xform grid =
+
+
+spawnGreen : Random.Seed -> TileGrid -> Maybe (Tile, TileGrid)
+spawnGreen seed0 grid =
+  if grid.greenCount == grid.maxGreens then
+    Nothing
+  else
+    let
+      idxGenerator : Random.Generator (Int, Int)
+      idxGenerator =
+        Random.pair
+          (Random.int 0 (grid.colCount - 1))
+          (Random.int 0 (grid.colCount - 1))
+      recur seed =
+        let
+          (idx, seed') = Random.step idxGenerator seed
+        in
+          case Dict.get idx grid.dict of
+            Nothing ->
+              -- random idx was not in bounds
+              recur seed'
+            Just tile ->
+              if tile.green then
+                -- tile already has a green
+                recur seed'
+              else if tile.kind /= Empty then
+                -- tile was a wall
+                recur seed'
+              else
+                -- empty tile, can insert green
+                let
+                  tile' = { tile | green = True }
+                  tileGrid' =
+                    insert idx tile' grid
+                    |> (\grid -> { grid | greenCount = grid.greenCount + 1 })
+                in
+                  Just (tile', tileGrid')
+    in
+      recur seed0
 
 
 -- ENCODE

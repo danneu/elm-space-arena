@@ -12,6 +12,7 @@ import Time exposing (Time)
 import Color
 import Json.Encode as JE
 import Task
+import Random
 -- 3rd
 import Keyboard.Extra as KE
 import Collage
@@ -44,14 +45,16 @@ type alias Model =
   , collision : Maybe TileGrid.CollisionResult
   , bombs : List Bomb
   , bombTime : Float
+  , seed : Random.Seed
   }
 
 
-init : x -> (Model, Cmd Msg)
-init _ =
+init : { startTime : Int } -> (Model, Cmd Msg)
+init {startTime} =
   let
     (kbModel, kbCmd) = KE.init
     tileGrid = TileGrid.default
+    seed = Random.initialSeed startTime
   in
     ( { nextId = 2
       , player = Player.init 1 (Vec.make 100 100)
@@ -62,6 +65,7 @@ init _ =
       , collision = Nothing
       , bombs = []
       , bombTime = 0
+      , seed = seed
       }
     , Cmd.batch
         [ Cmd.map Keyboard kbCmd
@@ -81,6 +85,7 @@ type Msg
   | Tick Time
   | ToggleTick
   | ResetPrevTick Time
+  | SpawnGreen
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -183,6 +188,16 @@ update msg model =
           }
         , cmd
         )
+    SpawnGreen ->
+      case TileGrid.spawnGreen model.seed model.tileGrid of
+        Nothing ->
+          (model, Cmd.none)
+        Just (tile, tileGrid') ->
+          ( { model
+                | tileGrid = tileGrid'
+            }
+          , Ports.greenSpawned (Tile.encode tile)
+          )
 
 
 -- VIEW
@@ -231,7 +246,9 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     List.concat
       [ if model.ticking then
-          [ Time.every (Time.millisecond * 20) Tick ]
+          [ Time.every (Time.millisecond * 20) Tick
+          , Time.every (Time.second * 3) (always SpawnGreen)
+          ]
         else
           []
       , [ Sub.map Keyboard KE.subscriptions ]
@@ -253,7 +270,7 @@ encodeBroadcast model =
 -- MAIN
 
 
-main : Program ()
+main : Program { startTime : Int }
 main =
   Html.App.programWithFlags
     { init = init

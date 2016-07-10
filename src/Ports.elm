@@ -15,6 +15,9 @@ port grid : JE.Value -> Cmd msg
 
 port bombHitWall : JE.Value -> Cmd msg
 
+-- Sends the greened tile
+port greenSpawned : JE.Value -> Cmd msg
+
 
 -- SOUNDS
 
