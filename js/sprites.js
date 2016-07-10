@@ -24,7 +24,7 @@ exports.makeTrailMaker = function (renderer, diameter) {
 
 
 exports.exhaustClip = function () {
-  var base = new PIXI.Texture.fromImage('../img/exhaust.gif');
+  var base = new PIXI.Texture.fromImage('./img/exhaust.gif');
   var textures = [];
   for (var i = 0; i < 19; i++) {
     textures.push(new PIXI.Texture(base, new PIXI.Rectangle(i*16, 0, 16, 16)));
