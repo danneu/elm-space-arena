@@ -5,6 +5,9 @@ module Collision.Bounds exposing (..)
 import Vec exposing (Vec)
 
 
+{- This file isn't currently used since the move to TileGrid.elm/Tile.elm
+-}
+
 type alias Bounds =
   { top : Float
   , left : Float

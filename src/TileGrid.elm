@@ -28,7 +28,6 @@ default : TileGrid
 default =
   let
     tileSize = 16
-    --tileRadius = tileSize / 2
     xformTile : Int -> Int -> Int -> Tile.Kind -> ((Int, Int), Tile)
     xformTile y rowIdx colIdx kind =
       let
@@ -46,8 +45,7 @@ default =
         List.indexedMap (xformTile y rowIdx) row
   in
     List.concatMap identity
-      --[ [List.repeat 64 Box]
-      [ [List.concat [ [Box, Empty], (List.repeat 62 Box) ]]
+      [ [List.repeat 64 Box]
       , List.repeat 18 (List.concat [ [Box], (List.repeat 62 Empty), [Box] ])
       , [List.repeat 64 Box]
       ]
@@ -94,8 +92,9 @@ tilesWithinPosRadius radius pos grid =
       []
     Just centerTile ->
       let
+        diameter = round (radius * 2)
         pred tile =
-          collides (round (radius * 2)) pos tile.tileSize tile.pos
+          collides diameter pos tile.tileSize tile.pos
       in
         Dict.values grid.dict
         |> List.filter pred
@@ -115,27 +114,17 @@ containingTile ((x, y) as pos) grid =
 -- Returns list of tiles adjacent to given tile idx (8 directions)
 idxNeighbors : (Int, Int) -> TileGrid -> List Tile
 idxNeighbors ((x, y) as idx) {dict} =
-  let
-    n = (x, y - 1)
-    ne = (x + 1, y - 1)
-    e = (x + 1, y)
-    se = (x + 1, y + 1)
-    s = (x, y + 1)
-    sw = (x - 1, y + 1)
-    w = (x - 1, y)
-    nw = (x - 1, y - 1)
-  in
-    [ Dict.get n dict
-    , Dict.get ne dict
-    , Dict.get e dict
-    , Dict.get se dict
-    , Dict.get s dict
-    , Dict.get sw dict
-    , Dict.get w dict
-    , Dict.get nw dict
-    ]
-    |> List.filter Util.isJust
-    |> List.map Util.unwrapMaybe
+  [ Dict.get (x, y - 1) dict -- n
+  , Dict.get (x + 1, y - 1) dict -- ne
+  , Dict.get (x + 1, y) dict -- e
+  , Dict.get (x + 1, y + 1) dict -- se
+  , Dict.get (x, y + 1) dict -- s
+  , Dict.get (x - 1, y + 1) dict -- sw
+  , Dict.get (x - 1, y) dict -- w
+  , Dict.get (x - 1, y - 1) dict -- nw
+  ]
+  |> List.filter Util.isJust
+  |> List.map Util.unwrapMaybe
 
 
 -- COLLISION
@@ -244,6 +233,9 @@ moveX size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
 -- size is entity side length (assumed square)
 trace : Int -> Vec -> Vec -> TileGrid -> CollisionResult
 trace size ((x, y) as prevPos) ((vx, vy) as vel) grid =
+  -- { pos = Vec.add prevPos vel
+  -- , dirs = { left = False, right = False, top = False, bottom = False }
+  -- }
   case containingTile prevPos grid of
     Nothing ->
       Debug.crash "Huh? Ship wasn't inside a tile?"

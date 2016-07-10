@@ -14,7 +14,7 @@ import Vec exposing (Vec)
 import Collision.Bounds
 
 
-{- I am bad at math.
+{- This file is to be replaced by TileGrid.elm
 -}
 
 

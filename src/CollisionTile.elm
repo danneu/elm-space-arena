@@ -11,6 +11,8 @@ import Element
 import Vec exposing (Vec)
 import Collision.Bounds exposing (Bounds)
 
+{- This file is to be replaced by Tile.elm
+-}
 
 type Kind
   = Empty -- Does not collide
