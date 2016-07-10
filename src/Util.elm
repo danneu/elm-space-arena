@@ -41,15 +41,6 @@ unwrapMaybe maybe =
       val
 
 
--- Translate our game positions to stage coordinates.
--- In our game, (0, 0) is the top-left point where +x goes right
--- and +y goes down.
-toCoord : { x : Int, y : Int } -> Vec -> (Float, Float)
-toCoord viewport (x, y) =
-  --(x - (toFloat viewport.x / 2), (toFloat viewport.y / 2) - y)
-  (x - (toFloat viewport.x / 2), (toFloat viewport.y / 2) - y)
-
-
 (=>) : a -> b -> (a, b)
 (=>) a b =
   (a, b)

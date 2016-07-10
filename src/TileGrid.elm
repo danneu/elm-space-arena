@@ -83,6 +83,12 @@ height grid =
 -- QUERY
 
 
+-- Percent of the max amount of greens currently on the board
+greenCoverage : TileGrid -> Float
+greenCoverage {greenCount, maxGreens} =
+  toFloat greenCount / toFloat maxGreens
+
+
 contains : (Int, Int) -> TileGrid -> Bool
 contains idx {dict} =
   case Dict.get idx dict of
@@ -285,10 +291,34 @@ insert idx tile grid =
 -- updateTile idx xform grid =
 
 
-spawnGreen : Random.Seed -> TileGrid -> Maybe (Tile, TileGrid)
+-- Returns list of all tiles that were collected by player in this tick
+checkGreens : Vec -> TileGrid -> (List Tile, TileGrid)
+checkGreens pos grid =
+  case containingTile pos grid of
+    Nothing ->
+      ([], grid)
+    Just tile ->
+      let
+        tilesToCheck = tile :: (idxNeighbors tile.idx grid)
+        accum tile ((collectedTiles, finalGrid) as memo) =
+          if not tile.green then
+            memo
+          else
+            let
+              tile' = { tile | green = False }
+              finalGrid' =
+                insert tile.idx tile' finalGrid
+                |> \g -> { g | greenCount = finalGrid.greenCount - 1 }
+            in
+              (tile' :: collectedTiles, finalGrid')
+      in
+        List.foldl accum ([], grid) tilesToCheck
+
+
+spawnGreen : Random.Seed -> TileGrid -> (Maybe Tile, TileGrid, Random.Seed)
 spawnGreen seed0 grid =
   if grid.greenCount == grid.maxGreens then
-    Nothing
+    (Nothing, grid, seed0)
   else
     let
       idxGenerator : Random.Generator (Int, Int)
@@ -319,7 +349,7 @@ spawnGreen seed0 grid =
                     insert idx tile' grid
                     |> (\grid -> { grid | greenCount = grid.greenCount + 1 })
                 in
-                  Just (tile', tileGrid')
+                  (Just tile', tileGrid', seed')
     in
       recur seed0
 

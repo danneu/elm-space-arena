@@ -9,21 +9,17 @@ import Html.App
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Time exposing (Time)
-import Color
 import Json.Encode as JE
 import Task
 import Random
 -- 3rd
 import Keyboard.Extra as KE
-import Collage
-import Element
 import Numeral
 -- 1st
 import Vec exposing (Vec)
 import Player
 import TileGrid exposing (TileGrid)
 import Util exposing ((=>))
-import Ship
 import Bombs exposing (Bomb)
 import Tile
 import Ports
@@ -53,8 +49,8 @@ init : { startTime : Int } -> (Model, Cmd Msg)
 init {startTime} =
   let
     (kbModel, kbCmd) = KE.init
-    tileGrid = TileGrid.default
     seed = Random.initialSeed startTime
+    tileGrid = TileGrid.default
   in
     ( { nextId = 2
       , player = Player.init 1 (Vec.make 100 100)
@@ -120,6 +116,9 @@ update msg model =
             -- Update player position
             (player', result) =
               Player.tick delta model.keyboard model.tileGrid model.player
+            -- Check green collisions
+            (collectedTiles, tileGrid) =
+              TileGrid.checkGreens model.player.pos model.tileGrid
             -- Update bombs
             (bombs, detonated) = Bombs.tick delta model.tileGrid model.bombs
             -- Shoot bomb
@@ -140,6 +139,7 @@ update msg model =
                 , bombs = bombs'
                 , nextId = id'
                 , bombTime = bombTime
+                , tileGrid = tileGrid
             }
             ! List.concat
                 [ [ -- Send every tick result to the JS side of our app
@@ -166,6 +166,12 @@ update msg model =
                       Ports.playerBomb ()
                     else
                       Cmd.none
+                    -- Player picked up green
+                  , case collectedTiles of
+                      [] ->
+                        Cmd.none
+                      tiles ->
+                        Ports.greensCollected (JE.list (List.map Tile.encode tiles))
                   ]
                 , List.map (Ports.bombHitWall << Bombs.encode1) detonated
                 ]
@@ -190,11 +196,12 @@ update msg model =
         )
     SpawnGreen ->
       case TileGrid.spawnGreen model.seed model.tileGrid of
-        Nothing ->
+        (Nothing, _, _) ->
           (model, Cmd.none)
-        Just (tile, tileGrid') ->
+        (Just tile, tileGrid', seed') ->
           ( { model
                 | tileGrid = tileGrid'
+                , seed = seed'
             }
           , Ports.greenSpawned (Tile.encode tile)
           )
@@ -247,7 +254,11 @@ subscriptions model =
     List.concat
       [ if model.ticking then
           [ Time.every (Time.millisecond * 20) Tick
-          , Time.every (Time.second * 3) (always SpawnGreen)
+            -- Spawn greens faster if there aren't many
+          , if TileGrid.greenCoverage model.tileGrid < 0.20 then
+              Time.every (Time.millisecond * 250) (always SpawnGreen)
+            else
+              Time.every (Time.second * 3) (always SpawnGreen)
           ]
         else
           []

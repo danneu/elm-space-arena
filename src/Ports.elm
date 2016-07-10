@@ -18,6 +18,9 @@ port bombHitWall : JE.Value -> Cmd msg
 -- Sends the greened tile
 port greenSpawned : JE.Value -> Cmd msg
 
+-- Sends list of tiles that were scavenged of their green
+port greensCollected : JE.Value -> Cmd msg
+
 
 -- SOUNDS
 

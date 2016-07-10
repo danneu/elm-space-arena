@@ -257,6 +257,20 @@ app.ports.greenSpawned.subscribe(function (tile) {
   greenLayer.addChild(clip);
 });
 
+app.ports.greensCollected.subscribe(function (tiles) {
+  // destroy greens
+  greenLayer.children.filter(function (clip) {
+    return tiles.some(function (tile) {
+      return clip.position.x === tile.pos.x && clip.position.y === tile.pos.y;
+    });
+  }).forEach(function (clip) {
+    greenLayer.removeChild(clip);
+    clip.destroy();
+  });
+  // play sound
+  sounds.green.play();
+});
+
 app.ports.playerHitWall.subscribe(function () {
   sounds.bounce.play();
 });
