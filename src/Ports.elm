@@ -13,6 +13,8 @@ port broadcast : JE.Value -> Cmd msg
 
 port grid : JE.Value -> Cmd msg
 
+port bombHitWall : JE.Value -> Cmd msg
+
 
 -- SOUNDS
 

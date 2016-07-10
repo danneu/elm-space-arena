@@ -91,7 +91,12 @@ stage.addChild(trails);
 var exhaustLayer = new PIXI.Container();
 stage.addChild(exhaustLayer);
 
+// EMP Bursts
+var empburstLayer = new PIXI.Container();
+stage.addChild(empburstLayer);
+
 // Grid
+// Gets assigned in the `grid` subscription once app sends us the tilegrid
 var grid;
 
 
@@ -127,6 +132,16 @@ function update () {
       // else, move it
       clip.position.x += clip.vel.x * deltaTime;
       clip.position.y += clip.vel.y * deltaTime;
+    }
+  }
+  // Move and decay empbursts
+  empburstLayer.position.set(offsetX, offsetY);
+  for (var i = 0; i < empburstLayer.children.length; i++) {
+    var clip = empburstLayer.children[i];
+    // if clip is at final frame, destroy it
+    if (clip.currentFrame === clip.totalFrames - 1) {
+      empburstLayer.removeChild(clip);
+      clip.destroy();
     }
   }
   // Move and decay trails
@@ -219,12 +234,20 @@ app.ports.grid.subscribe(function (blocks) {
   stage.addChild(grid);
 });
 
+app.ports.bombHitWall.subscribe(function (bomb) {
+  var clip = sprites.empburstClip();
+  clip.position.x = bomb.pos.x;
+  clip.position.y = bomb.pos.y;
+  empburstLayer.addChild(clip);
+  sounds.bombExplode.play();
+});
+
 app.ports.playerHitWall.subscribe(function () {
   sounds.bounce.play();
 });
 
 app.ports.playerBomb.subscribe(function () {
-  sounds.bomb.play();
+  sounds.bombShoot.play();
 });
 
 

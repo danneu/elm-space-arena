@@ -116,7 +116,7 @@ update msg model =
             (player', result) =
               Player.tick delta model.keyboard model.tileGrid model.player
             -- Update bombs
-            bombs = Bombs.tick delta model.tileGrid model.bombs
+            (bombs, detonated) = Bombs.tick delta model.tileGrid model.bombs
             -- Shoot bomb
             (bombs', bombTime, id', didShootBomb) =
               if KE.isPressed KE.CharF model.keyboard && model.bombTime >= 0 then
@@ -136,31 +136,34 @@ update msg model =
                 , nextId = id'
                 , bombTime = bombTime
             }
-            ! [ -- Send every tick result to the JS side of our app
-                Ports.broadcast (encodeBroadcast model)
-                -- Play bounce sound if hit wall hard enough
-                -- FIXME: sloppy as hell. also fix the dirs spam finally.
-              , let
-                  {dirs} = result
-                  (vx, vy) = model.player.vel
-                  threshold = 10
-                  didCollide =
-                    dirs.top || dirs.bottom || dirs.left || dirs.right
-                  hitYHard =
-                    (dirs.top || dirs.bottom) && abs vy > threshold
-                  hitXHard =
-                    (dirs.left || dirs.right) && abs vx > threshold
-                in
-                  if didCollide && (hitXHard || hitYHard)  then
-                    Ports.playerHitWall ()
-                  else
-                    Cmd.none
-                -- Play bomb sound
-              , if didShootBomb then
-                  Ports.playerBomb ()
-                else
-                  Cmd.none
-              ]
+            ! List.concat
+                [ [ -- Send every tick result to the JS side of our app
+                    Ports.broadcast (encodeBroadcast model)
+                    -- Play bounce sound if hit wall hard enough
+                    -- FIXME: sloppy as hell. also fix the dirs spam finally.
+                  , let
+                      {dirs} = result
+                      (vx, vy) = model.player.vel
+                      threshold = 10
+                      didCollide =
+                        dirs.top || dirs.bottom || dirs.left || dirs.right
+                      hitYHard =
+                        (dirs.top || dirs.bottom) && abs vy > threshold
+                      hitXHard =
+                        (dirs.left || dirs.right) && abs vx > threshold
+                    in
+                      if didCollide && (hitXHard || hitYHard)  then
+                        Ports.playerHitWall ()
+                      else
+                        Cmd.none
+                    -- Play bomb sound
+                  , if didShootBomb then
+                      Ports.playerBomb ()
+                    else
+                      Cmd.none
+                  ]
+                , List.map (Ports.bombHitWall << Bombs.encode1) detonated
+                ]
 
     ResetPrevTick now ->
       ({ model | prevTick = Just now }, Cmd.none)

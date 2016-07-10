@@ -18,13 +18,39 @@ type alias Bomb =
   }
 
 
-tick : Float -> TileGrid -> List Bomb -> List Bomb
-tick delta grid =
-  List.filterMap
-    ( moveBomb delta
-      >> checkWall delta grid
-      >> (flip Maybe.andThen) (expireBomb delta)
-    )
+-- List.filterMap
+--   ( moveBomb delta
+--     >> checkWall delta grid
+--     >> (flip Maybe.andThen) (expireBomb delta)
+--   )
+tick : Float -> TileGrid -> List Bomb -> (List Bomb, List Bomb)
+tick delta grid bombs =
+  let
+    accum bombs ((nextBombs, detonated) as memo) =
+      case bombs of
+        [] ->
+          memo
+        b :: rest ->
+          let
+            -- 1. Move them bomb
+            b' = moveBomb delta b
+          in
+            -- 2. Check if it hit a wall (detonate)
+            case checkWall delta grid b' of
+              Nothing ->
+                -- Detonated
+                accum rest (nextBombs, b' :: detonated)
+              Just _ ->
+                -- 3. Check if bomb is expired
+                case expireBomb delta b' of
+                  Nothing ->
+                    -- Expired
+                    accum rest memo
+                  Just _ ->
+                    -- Bomb is still live
+                    accum rest (b' :: nextBombs, detonated)
+  in
+    accum bombs ([], [])
 
 
 -- Check if bomb has run out of ttl
