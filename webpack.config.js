@@ -100,13 +100,10 @@ if (TARGET_ENV === 'production') {
     },
     plugins: [
       new CopyWebpackPlugin([
-        {
-          from: 'static/img/',
-          to: 'img/'
-        },
-        {
-          from: 'static/favicon.ico'
-        },
+        { from: 'static/img/', to: 'img/' },
+        { from: 'static/js/', to: 'js/' },
+        { from: 'static/sounds/', to: 'sounds/' },
+        { from: 'static/favicon.ico' },
       ]),
       new webpack.optimize.OccurenceOrderPlugin(),
       // extract CSS into a separate file
