@@ -234,13 +234,22 @@ app.ports.broadcast.subscribe(function (newState) {
 app.ports.grid.subscribe(function (data) {
   // short-circuit on hot-reload
   if (grid.children.length > 0) return;
-  data.tiles.forEach(function (block) {
-    var sprite = new PIXI.Sprite.fromImage('./img/wall.png');
+  data.tiles.forEach(function (tile) {
+    var sprite;
+    if (tile.kind === 'BOX') {
+      sprite = new PIXI.extras.TilingSprite.fromImage('./img/wall.png', 16, 16);
+    } else if (tile.kind === 'EMPTY') {
+      sprite = new PIXI.extras.TilingSprite(PIXI.Texture.EMPTY, 16, 16)
+    }
     sprite.anchor.set(0.5);
-    sprite.width = 16;
-    sprite.height = 16;
-    sprite.position.set(block.pos.x, block.pos.y);
+    sprite.position.set(tile.pos.x, tile.pos.y);
     grid.addChild(sprite);
+    // .state is my personal place to put stuff
+    sprite.state = {
+      idx: tile.idx
+    };
+    // Hook up handlers to each sprite
+    connectTileSprite(sprite);
   });
 });
 
@@ -280,6 +289,35 @@ app.ports.playerBomb.subscribe(function () {
 });
 
 
+// MAP BUILDING
+
+
+// While a fun experiment, this project will become insufferable
+// unless I start abstracting this.
+app.ports.tileUpdated.subscribe(function (tile) {
+  console.log('update', tile);
+  var sprite = grid.children.find(function (sprite) {
+    return sprite.state.idx.x === tile.idx.x
+      && sprite.state.idx.y === tile.idx.y;
+  });
+  if (tile.kind === 'EMPTY') {
+    sprite.texture = PIXI.Texture.EMPTY;
+  } else if (tile.kind === 'BOX') {
+    sprite.texture = PIXI.Texture.fromImage('./img/wall.png');
+  }
+  if (!tile.green) {
+    var green = greenLayer.children.find(function (sprite) {
+      return sprite.position.x === tile.pos.x
+        && sprite.position.y === tile.pos.y;
+    });
+    if (green) {
+      greenLayer.removeChild(green);
+      green.destroy();
+    }
+  }
+});
+
+
 // DOM EVENTS
 
 
@@ -290,3 +328,17 @@ window.onresize = function () {
   starfield.width = viewport.x;
   starfield.height = viewport.y;
 };
+
+
+// TILE SPRITE INTERACTIVITY
+
+
+function connectTileSprite (sprite) {
+  sprite.interactive = true;
+  sprite.on('mousedown', onTileClick);
+}
+
+function onTileClick () {
+  console.log('tile click', this.state.idx);
+  app.ports.tileClicked.send([this.state.idx.x, this.state.idx.y]);
+}

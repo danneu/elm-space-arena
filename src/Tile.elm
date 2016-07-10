@@ -10,6 +10,7 @@ import Collage
 import Element
 -- 1st
 import Vec exposing (Vec)
+import Util exposing ((=>))
 
 
 type alias Point = (Int, Int)
@@ -33,8 +34,19 @@ type alias Tile =
 
 
 encode : Tile -> JE.Value
-encode {pos, green} =
+encode {pos, green, kind, idx} =
   JE.object
-    [ ("pos", Vec.encode pos)
-    , ("green", JE.bool green)
+    [ "idx" =>
+        JE.object
+          [ "x" => JE.int (fst idx)
+          , "y" => JE.int (snd idx)
+          ]
+    , "pos" =>
+        Vec.encode pos
+    , "kind" =>
+        case kind of
+          Empty -> JE.string "EMPTY"
+          Box -> JE.string "BOX"
+    , "green" =>
+        JE.bool green
     ]

@@ -5,6 +5,18 @@ port module Ports exposing (..)
 -- Elm
 import Json.Encode as JE
 
+--
+-- INCOMING
+--
+
+
+port tileClicked : ((Int, Int) -> msg) -> Sub msg
+
+
+--
+-- OUTGOING
+--
+
 
 -- STATE BROADCAST
 
@@ -28,3 +40,10 @@ port greensCollected : JE.Value -> Cmd msg
 port playerHitWall : () -> Cmd msg
 
 port playerBomb : () -> Cmd msg
+
+
+
+-- MAP BUILDING
+
+
+port tileUpdated : JE.Value -> Cmd msg

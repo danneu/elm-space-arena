@@ -287,8 +287,18 @@ insert idx tile grid =
       | dict = Dict.insert idx tile grid.dict
   }
 
--- updateTile : (Int, Int) -> (Tile -> Tile) -> TileGrid -> TileGrid
--- updateTile idx xform grid =
+
+valueAt : (Int, Int) -> TileGrid -> Maybe Tile
+valueAt idx {dict} =
+  Dict.get idx dict
+
+update : (Int, Int) -> (Maybe Tile -> Maybe Tile) -> TileGrid -> TileGrid
+update idx xform grid =
+  case xform (valueAt idx grid) of
+    Nothing ->
+      grid
+    Just new ->
+      insert idx new grid
 
 
 -- Returns list of all tiles that were collected by player in this tick
@@ -354,28 +364,23 @@ spawnGreen seed0 grid =
       recur seed0
 
 
+-- MAP BUILDING
+
+
+-- toggleTile :
+
+
 -- ENCODE
 
 
--- Only the boxes (collidable tiles) get sent to the PIXI side of our
--- app for rendering.
 encode : TileGrid -> JE.Value
 encode grid =
-  let
-    isBox tile =
-      case tile.kind of
-        Empty ->
-          False
-        Box ->
-          True
-  in
-    JE.object
-      [ "height" => JE.int (height grid)
-      , "width" => JE.int (width grid)
-      , "tiles" =>
-          ( allTiles grid
-            |> List.filter isBox
-            |> List.map Tile.encode
-            |> JE.list
-          )
-      ]
+  JE.object
+    [ "height" => JE.int (height grid)
+    , "width" => JE.int (width grid)
+    , "tiles" =>
+        ( allTiles grid
+          |> List.map Tile.encode
+          |> JE.list
+        )
+    ]

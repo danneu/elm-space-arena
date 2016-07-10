@@ -82,6 +82,8 @@ type Msg
   | ToggleTick
   | ResetPrevTick Time
   | SpawnGreen
+  -- PIXI interactivity
+  | TileClicked (Int, Int)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -205,6 +207,31 @@ update msg model =
             }
           , Ports.greenSpawned (Tile.encode tile)
           )
+    TileClicked idx ->
+      let
+        xform maybeTile =
+          case maybeTile of
+            Nothing ->
+              Debug.crash "Impossible"
+            Just old ->
+              { old
+                  | kind =
+                      case old.kind of
+                        Tile.Box -> Tile.Empty
+                        Tile.Empty -> Tile.Box
+                  , green = False
+              }
+        tile' =
+          Debug.log "tile'" <| xform (TileGrid.valueAt idx model.tileGrid)
+        grid' =
+          TileGrid.insert idx tile' model.tileGrid
+      in
+        { model | tileGrid = grid'
+        }
+        !
+        [ Ports.tileUpdated (Tile.encode tile')
+        ]
+
 
 
 -- VIEW
@@ -226,7 +253,7 @@ view model =
               , "margin-left" => "10px"
               ]
       ]
-      [ text "Arrows to move, F to bomb, Spacebar to pause" ]
+      [ text "Arrows to move, F to bomb, Spacebar to pause, Click to toggle walls" ]
     , ul
       []
       [ li [] [ text <| "pos: " ++ Vec.show 1 model.player.pos ]
@@ -262,7 +289,9 @@ subscriptions model =
           ]
         else
           []
-      , [ Sub.map Keyboard KE.subscriptions ]
+      , [ Sub.map Keyboard KE.subscriptions
+        , Ports.tileClicked TileClicked
+        ]
       ]
     |> Sub.batch
 
