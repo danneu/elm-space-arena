@@ -162,7 +162,6 @@ collides size1 ((x1, y1) as pos1) size2 ((x2, y2) as pos2) =
     overlapsX && overlapsY
 
 
--- vel should already be adjusted by delta time
 moveY : Float -> Int -> Vec -> Vec -> Int -> List Tile
         -> { finalPosY : Float, top : Bool, bottom : Bool }
 moveY delta size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
@@ -241,12 +240,9 @@ moveX delta size ((x, y) as prevPos) ((vx, vy) as vel) tileSize neighbors =
     accum neighbors
 
 
--- size is entity side length (assumed square)
+-- size is entity hitbox side-length (assumed square)
 trace : Float -> Int -> Vec -> Vec -> TileGrid -> CollisionResult
 trace delta size ((x, y) as prevPos) ((vx, vy) as vel) grid =
-  -- { pos = Vec.add prevPos vel
-  -- , dirs = { left = False, right = False, top = False, bottom = False }
-  -- }
   case containingTile prevPos grid of
     Nothing ->
       Debug.crash "Huh? Ship wasn't inside a tile?"
@@ -271,6 +267,8 @@ trace delta size ((x, y) as prevPos) ((vx, vy) as vel) grid =
 -- ENCODE
 
 
+-- Only the boxes (collidable tiles) get sent to the PIXI side of our
+-- app for rendering.
 encode : TileGrid -> JE.Value
 encode grid =
   let
